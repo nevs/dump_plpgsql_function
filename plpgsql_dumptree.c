@@ -1,6 +1,7 @@
 
-#include "postgres.h"
-#include "fmgr.h"
+#include <postgres.h>
+#include <fmgr.h>
+#include <plpgsql.h>
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
