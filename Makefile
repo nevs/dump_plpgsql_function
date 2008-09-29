@@ -11,3 +11,6 @@ clean:
 test: dump_plpgsql_function.so
 		psql < test.sql
 
+nice: dump_plpgsql_function.so
+		psql -t -q < test.sql | xmllint --format -
+
