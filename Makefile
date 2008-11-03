@@ -1,16 +1,24 @@
 
-CFLAGS= -Wall -g -I/usr/include/postgresql/8.3/server -I/home/sven/diplom/postgresql/src/pl/plpgsql/src -L/usr/lib/postgresql/8.3/lib
+PGSRC=/home/sven/diplom/postgresql/src/
+
+PREFIX=/home/sven/diplom/local/
+
+INCLUDE= -I${PREFIX}include/postgresql/server -I${PGSRC}pl/plpgsql/src 
+
+CFLAGS= -Wall -g ${INCLUDE} -L${PREFIX}lib
+
+default: nice
 
 dump_plpgsql_function.so: dump_plpgsql_function.c
 		gcc ${CFLAGS} -fpic -c dump_plpgsql_function.c
-		gcc ${CFLAGS} -shared -o dump_plpgsql_function.so dump_plpgsql_function.o /usr/lib/postgresql/8.3/lib/plpgsql.so
+		gcc ${CFLAGS} -shared -o dump_plpgsql_function.so dump_plpgsql_function.o ${PREFIX}lib/postgresql/plpgsql.so
 
 clean:
 		rm *.so *.o
 
 test: dump_plpgsql_function.so
-		psql < test.sql
+		${PREFIX}bin/psql < test.sql
 
 nice: dump_plpgsql_function.so
-		psql -t -q < test.sql | xmllint --format -
+		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -
 
