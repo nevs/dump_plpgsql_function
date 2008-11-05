@@ -1,15 +1,17 @@
 
-PGSRC=/home/sven/diplom/postgresql/src/
+PLPGSQLSRC=/home/sven/diplom/postgresql/src/pl/plpgsql/src
 
 PREFIX=/home/sven/diplom/local/
 
-INCLUDE= -I${PREFIX}include/postgresql/server -I${PGSRC}pl/plpgsql/src 
+INCLUDE= -I${PREFIX}include/postgresql/server -I${PLPGSQLSRC}
 
 CFLAGS= -Wall -g ${INCLUDE} -L${PREFIX}lib
 
 default: nice
 
-dump_plpgsql_function.so: dump_plpgsql_function.c
+binary: dump_plpgsql_function.so
+
+dump_plpgsql_function.so: Makefile dump_plpgsql_function.c
 		gcc ${CFLAGS} -fpic -c dump_plpgsql_function.c
 		gcc ${CFLAGS} -shared -o dump_plpgsql_function.so dump_plpgsql_function.o ${PREFIX}lib/postgresql/plpgsql.so
 
