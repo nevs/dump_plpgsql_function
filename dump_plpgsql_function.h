@@ -1,6 +1,6 @@
 
 
-const char * NodeNames[1000] = {
+const char const * NodeTag_Names[1000] = {
   [T_Invalid] = "Invalid",
   [T_IndexInfo] = "IndexInfo",
   [T_ExprContext] = "ExprContext",
@@ -291,5 +291,18 @@ const char * NodeNames[1000] = {
   [T_TriggerData] = "TriggerData",
   [T_ReturnSetInfo] = "ReturnSetInfo",
   [T_TIDBitmap] = "TIDBitmap"
+};
+
+const char * A_Expr_Kind_Names[1000] = {
+  [AEXPR_OP] = "EXPR_OP",
+  [AEXPR_AND] = "EXPR_AND",
+  [AEXPR_OR] = "EXPR_OR",
+  [AEXPR_NOT] = "EXPR_NOT",
+  [AEXPR_OP_ANY] = "EXPR_OP_ANY",
+  [AEXPR_OP_ALL] = "EXPR_OP_ALL",
+  [AEXPR_DISTINCT] = "EXPR_DISTINCT",
+  [AEXPR_NULLIF] = "EXPR_NULLIF",
+  [AEXPR_OF] = "EXPR_OF",
+  [AEXPR_IN] = "EXPR_IN"
 };
 

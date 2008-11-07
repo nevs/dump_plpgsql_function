@@ -9,9 +9,10 @@
 #include <plpgsql.h>
 #include <lib/stringinfo.h>
 
-#define BUFSIZE 4096
+#include "dump_plpgsql_function.h"
 
 #define ROOTNODENAME "function_tree"
+
 
 PG_MODULE_MAGIC;
 
@@ -21,50 +22,37 @@ PG_MODULE_MAGIC;
  *
  */
 
-typedef struct function_dump {
+typedef struct dump_context {
   PLpgSQL_function * func;
   char ** output;
-} FunctionDump;
+} FunctionDumpContext;
 
 static char * dumptree(PLpgSQL_function *func);
 
-static void dump_stmt( FunctionDump dump, PLpgSQL_stmt *stmt);
-static void dump_block( FunctionDump dump, PLpgSQL_stmt_block *block);
-static void dump_loop( FunctionDump dump, PLpgSQL_stmt_loop *stmt);
-static void dump_while( FunctionDump dump, PLpgSQL_stmt_while *stmt);
-static void dump_fori( FunctionDump dump, PLpgSQL_stmt_fori *stmt);
-static void dump_fors( FunctionDump dump, PLpgSQL_stmt_fors *stmt);
-static void dump_exit( FunctionDump dump, PLpgSQL_stmt_exit *stmt);
-static void dump_return( FunctionDump dump, PLpgSQL_stmt_return *stmt);
-static void dump_return_next( FunctionDump dump, PLpgSQL_stmt_return_next *stmt);
-static void dump_return_query( FunctionDump dump, PLpgSQL_stmt_return_query *stmt);
-static void dump_raise( FunctionDump dump, PLpgSQL_stmt_raise *stmt);
-static void dump_execsql( FunctionDump dump, PLpgSQL_stmt_execsql *stmt);
-static void dump_dynexecute( FunctionDump dump, PLpgSQL_stmt_dynexecute *stmt);
-static void dump_dynfors( FunctionDump dump, PLpgSQL_stmt_dynfors *stmt);
-static void dump_getdiag( FunctionDump dump, PLpgSQL_stmt_getdiag *stmt);
-static void dump_open( FunctionDump dump, PLpgSQL_stmt_open *stmt);
-static void dump_fetch( FunctionDump dump, PLpgSQL_stmt_fetch *stmt);
-static void dump_cursor_direction( FunctionDump dump, PLpgSQL_stmt_fetch *stmt);
-static void dump_close( FunctionDump dump, PLpgSQL_stmt_close *stmt);
-static void dump_perform( FunctionDump dump, PLpgSQL_stmt_perform *stmt);
-static void dump_expr( FunctionDump dump, PLpgSQL_expr *expr );
-static void dump_assign( FunctionDump dump, PLpgSQL_stmt_assign *stmt);
-static void dump_if( FunctionDump dump, PLpgSQL_stmt_if *stmt);
+static void dump_stmt( FunctionDumpContext dump, PLpgSQL_stmt *stmt);
+static void dump_block( FunctionDumpContext dump, PLpgSQL_stmt_block *block);
+static void dump_loop( FunctionDumpContext dump, PLpgSQL_stmt_loop *stmt);
+static void dump_while( FunctionDumpContext dump, PLpgSQL_stmt_while *stmt);
+static void dump_fori( FunctionDumpContext dump, PLpgSQL_stmt_fori *stmt);
+static void dump_fors( FunctionDumpContext dump, PLpgSQL_stmt_fors *stmt);
+static void dump_exit( FunctionDumpContext dump, PLpgSQL_stmt_exit *stmt);
+static void dump_return( FunctionDumpContext dump, PLpgSQL_stmt_return *stmt);
+static void dump_return_next( FunctionDumpContext dump, PLpgSQL_stmt_return_next *stmt);
+static void dump_return_query( FunctionDumpContext dump, PLpgSQL_stmt_return_query *stmt);
+static void dump_raise( FunctionDumpContext dump, PLpgSQL_stmt_raise *stmt);
+static void dump_execsql( FunctionDumpContext dump, PLpgSQL_stmt_execsql *stmt);
+static void dump_dynexecute( FunctionDumpContext dump, PLpgSQL_stmt_dynexecute *stmt);
+static void dump_dynfors( FunctionDumpContext dump, PLpgSQL_stmt_dynfors *stmt);
+static void dump_getdiag( FunctionDumpContext dump, PLpgSQL_stmt_getdiag *stmt);
+static void dump_open( FunctionDumpContext dump, PLpgSQL_stmt_open *stmt);
+static void dump_fetch( FunctionDumpContext dump, PLpgSQL_stmt_fetch *stmt);
+static void dump_cursor_direction( FunctionDumpContext dump, PLpgSQL_stmt_fetch *stmt);
+static void dump_close( FunctionDumpContext dump, PLpgSQL_stmt_close *stmt);
+static void dump_perform( FunctionDumpContext dump, PLpgSQL_stmt_perform *stmt);
+static void dump_expr( FunctionDumpContext dump, PLpgSQL_expr *expr );
+static void dump_assign( FunctionDumpContext dump, PLpgSQL_stmt_assign *stmt);
+static void dump_if( FunctionDumpContext dump, PLpgSQL_stmt_if *stmt);
 
-
-/** helper function to convert c strings to text */
-text * cstring_to_text_with_len( const char * s, int len ) {
-  text * result = (text *) palloc(len + VARHDRSZ);
-  SET_VARSIZE(result, len + VARHDRSZ);
-  memcpy( VARDATA(result), s, len );
-  return result;
-}
-
-/** helper function to convert c strings to text */
-text * cstring_to_text( const char * s ) {
-  return cstring_to_text_with_len( s, strlen(s));
-}
 
 /** helper function to append c string to existing c string */
 static int 
@@ -126,12 +114,32 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
 }
 
 
+static void dump_sql_query( FunctionDumpContext dump, const char * query_string, Oid *paramTypes, int numParams );
+
+PG_FUNCTION_INFO_V1(dump_sql_parse_tree);
+Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
+{
+  FunctionDumpContext dump;
+  char * output = NULL;
+  dump.output = &output;
+
+  const char * input = PG_GETARG_TEXT_P( 0 )->vl_dat;
+
+  dump_sql_query( dump, input, NULL, 0 );
+
+  if ( *dump.output )
+    PG_RETURN_TEXT_P( cstring_to_text( *dump.output ) );
+  else 
+    PG_RETURN_NULL();
+}
+
 static char * dumptree(PLpgSQL_function *func)
 {
-  FunctionDump dump;
+  FunctionDumpContext dump;
+  char * output = NULL;
   dump.func = func;
-  *dump.output = NULL;
-  int      i;
+  dump.output = &output;
+  int i;
   PLpgSQL_datum *d;
 
   append_string( dump.output, "<%s function_name=\"%s\">", ROOTNODENAME, func->fn_name ); 
@@ -217,32 +225,69 @@ static char * dumptree(PLpgSQL_function *func)
   return *dump.output;
 }
 
-static void dump_parse_node( FunctionDump dump, Node * node );
+static void dump_parse_node( FunctionDumpContext dump, Node * node );
 
-bool parse_tree_walker( Node *node, FunctionDump * dump )
+bool parse_tree_walker( Node *node, FunctionDumpContext * dump )
 {
   if (node == NULL) return false;
 
-  append_string( dump->output, "<node tag=\"%d\">", nodeTag( node ) );
-  bool result = raw_expression_tree_walker(node, parse_tree_walker, (void *) dump );
-  append_string( dump->output, "</node>" );
+  const char *tagname = NodeTag_Names[nodeTag(node)];
 
-  return result;
-}
-
-static void dump_sql_query( FunctionDump dump, const char * query_string, Oid *paramTypes, int numParams )
-{
-  List * parsetree_list = pg_parse_query(query_string);
-  ListCell * item;
-
-  foreach( item, parsetree_list ) {
-    raw_expression_tree_walker( lfirst( item ), parse_tree_walker, (void  *) &dump );
+  if (tagname) {
+    append_string( dump->output, "<%s>", tagname );
+  } else {
+    tagname = "node";
+    append_string( dump->output, "<%s tag=\"%d\">", tagname, nodeTag( node ) );
   }
 
+  switch( nodeTag(node) ) {
+    case T_String:
+      append_string( dump->output, "%s", strVal( node ) );
+      break;
+    case T_A_Const: 
+      parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) dump );
+      break;
+    case T_A_Expr:
+      append_string( dump->output, "<operator type=\"%s\">", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
+      switch( ((A_Expr *)node)->kind ) {
+        case AEXPR_OP:
+          append_string( dump->output, "<name>" );
+          parse_tree_walker((Node *) ((A_Expr *)node)->name, (void *) dump );
+          append_string( dump->output, "</name>" );
+          break;
+        default:
+          break;
+      }
+      append_string( dump->output, "</operator>" );
+
+      append_string( dump->output, "<left>" );
+      parse_tree_walker((Node *) ((A_Expr *)node)->lexpr, (void *) dump );
+      append_string( dump->output, "</left>" );
+
+      append_string( dump->output, "<right>" );
+      parse_tree_walker((Node *) ((A_Expr *)node)->rexpr, (void *) dump );
+      append_string( dump->output, "</right>" );
+      break;
+    case T_A_Indirection:
+      parse_tree_walker((Node *) ((A_Indirection *)node)->arg, (void *) dump );
+
+    default: 
+      raw_expression_tree_walker(node, parse_tree_walker, (void *) dump );
+      break;
+  }
+
+  append_string( dump->output, "</%s>", tagname );
+
+  return false;
 }
 
+static void dump_sql_query( FunctionDumpContext dump, const char * query_string, Oid *paramTypes, int numParams )
+{
+  List * parsetree_list = pg_parse_query(query_string);
+  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, (void  *) &dump );
+}
 
-static void dump_parse_node( FunctionDump dump, Node * node ) {
+static void dump_parse_node( FunctionDumpContext dump, Node * node ) {
   ListCell * item;
 
   switch( nodeTag( node ) ) {
@@ -259,42 +304,7 @@ static void dump_parse_node( FunctionDump dump, Node * node ) {
 
       append_string( dump.output, "</select>" );
       break;
-    case T_String: /* 653 */
-      append_string( dump.output, "<string>%s</string>", strVal( node ) );
-      break;
-    case T_A_Expr: /* 900 */
-      append_string( dump.output, "<expression>" );
-      A_Expr * expr = (A_Expr *) node;
-      switch( expr->kind ) {
-        case AEXPR_OP:
-          append_string( dump.output, "<operator type=\"normal\">" );
-          append_string( dump.output, "<name>" );
-          foreach( item, expr->name )
-            dump_parse_node( dump, lfirst( item ) );
-          append_string( dump.output, "</name>" );
-          append_string( dump.output, "</operator>" );
-          break;
-        default:
-          append_string( dump.output, "<operator type=\"%d\"/>", expr->kind );
-      }
-
-      append_string( dump.output, "<left>" );
-      dump_parse_node( dump, expr->lexpr );
-      append_string( dump.output, "</left>" );
-
-      append_string( dump.output, "<right>" );
-      dump_parse_node( dump, expr->rexpr );
-      append_string( dump.output, "</right>" );
-
-      append_string( dump.output, "</expression>" );
-      break;
 /*
-    case T_A_Const:
-      append_string( dump.output, "<const>" );
-      A_Const * constant = (A_Const *) node;
-      append_string( dump.output, "<type>%s</type>", TypeNameToString( constant->typename ) );
-      append_string( dump.output, "</const>" );
-      break;
   
     case T_A_Indirection:
       append_string( dump.output, "<A_Indirection>", nodeTag( node ) );
@@ -337,7 +347,7 @@ static void dump_parse_node( FunctionDump dump, Node * node ) {
 /** taken from pl_funcs.c */
 
 static void
-dump_stmt( FunctionDump dump, PLpgSQL_stmt *stmt)
+dump_stmt( FunctionDumpContext dump, PLpgSQL_stmt *stmt)
 {
   append_string( dump.output, "<statement line=\"%d\">", stmt->lineno );
   switch (stmt->cmd_type)
@@ -410,7 +420,7 @@ dump_stmt( FunctionDump dump, PLpgSQL_stmt *stmt)
 }
 
 static void
-dump_stmts( FunctionDump dump, List *stmts)
+dump_stmts( FunctionDumpContext dump, List *stmts)
 {
   append_string( dump.output, "<statements>" );
   ListCell   *s;
@@ -421,7 +431,7 @@ dump_stmts( FunctionDump dump, List *stmts)
 }
 
 static void
-dump_block( FunctionDump dump, PLpgSQL_stmt_block *block)
+dump_block( FunctionDumpContext dump, PLpgSQL_stmt_block *block)
 {
   append_string( dump.output, "<block name=\"%s\">", block->label == NULL ? "" : block->label );
 
@@ -456,7 +466,7 @@ dump_block( FunctionDump dump, PLpgSQL_stmt_block *block)
 }
 
 static void
-dump_assign( FunctionDump dump, PLpgSQL_stmt_assign *stmt)
+dump_assign( FunctionDumpContext dump, PLpgSQL_stmt_assign *stmt)
 {
   append_string( dump.output, "<assignment var=\"%d\">", stmt->varno );
   dump_expr( dump, stmt->expr);
@@ -464,7 +474,7 @@ dump_assign( FunctionDump dump, PLpgSQL_stmt_assign *stmt)
 }
 
 static void
-dump_if( FunctionDump dump, PLpgSQL_stmt_if *stmt)
+dump_if( FunctionDumpContext dump, PLpgSQL_stmt_if *stmt)
 {
   append_string( dump.output, "<if>" );
   append_string( dump.output, "<condition>" );
@@ -486,7 +496,7 @@ dump_if( FunctionDump dump, PLpgSQL_stmt_if *stmt)
 }
 
 static void
-dump_loop( FunctionDump dump, PLpgSQL_stmt_loop *stmt)
+dump_loop( FunctionDumpContext dump, PLpgSQL_stmt_loop *stmt)
 {
   append_string( dump.output, "<loop>" );
   dump_stmts( dump, stmt->body);
@@ -494,7 +504,7 @@ dump_loop( FunctionDump dump, PLpgSQL_stmt_loop *stmt)
 }
 
 static void
-dump_while( FunctionDump dump, PLpgSQL_stmt_while *stmt)
+dump_while( FunctionDumpContext dump, PLpgSQL_stmt_while *stmt)
 {
   append_string( dump.output, "<while>" );
   append_string( dump.output, "<condition>" );
@@ -505,7 +515,7 @@ dump_while( FunctionDump dump, PLpgSQL_stmt_while *stmt)
 }
 
 static void
-dump_fori( FunctionDump dump, PLpgSQL_stmt_fori *stmt)
+dump_fori( FunctionDumpContext dump, PLpgSQL_stmt_fori *stmt)
 {
   append_string( dump.output, "<fori>" );
   printf("FORI %s %s\n", stmt->var->refname, (stmt->reverse) ? "REVERSE" : "NORMAL");
@@ -527,7 +537,7 @@ dump_fori( FunctionDump dump, PLpgSQL_stmt_fori *stmt)
 }
 
 static void
-dump_fors( FunctionDump dump, PLpgSQL_stmt_fors *stmt)
+dump_fors( FunctionDumpContext dump, PLpgSQL_stmt_fors *stmt)
 {
   append_string( dump.output, "<fors>" );
   printf("FORS %s ", (stmt->rec != NULL) ? stmt->rec->refname : stmt->row->refname);
@@ -541,7 +551,7 @@ dump_fors( FunctionDump dump, PLpgSQL_stmt_fors *stmt)
 }
 
 static void
-dump_open( FunctionDump dump, PLpgSQL_stmt_open *stmt)
+dump_open( FunctionDumpContext dump, PLpgSQL_stmt_open *stmt)
 {
   append_string( dump.output, "<open/>" );
   printf("OPEN curvar=%d\n", stmt->curvar);
@@ -568,7 +578,7 @@ dump_open( FunctionDump dump, PLpgSQL_stmt_open *stmt)
 }
 
 static void
-dump_fetch( FunctionDump dump, PLpgSQL_stmt_fetch *stmt)
+dump_fetch( FunctionDumpContext dump, PLpgSQL_stmt_fetch *stmt)
 {
   append_string( dump.output, "<fetch>" );
 
@@ -579,11 +589,11 @@ dump_fetch( FunctionDump dump, PLpgSQL_stmt_fetch *stmt)
 
     if (stmt->rec != NULL)
     {
-      printf("    target = %d %s\n", stmt->rec->recno, stmt->rec->refname);
+//      printf("    target = %d %s\n", stmt->rec->recno, stmt->rec->refname);
     }
     if (stmt->row != NULL)
     {
-      printf("    target = %d %s\n", stmt->row->rowno, stmt->row->refname);
+//      printf("    target = %d %s\n", stmt->row->rowno, stmt->row->refname);
     }
   }
   else
@@ -595,7 +605,7 @@ dump_fetch( FunctionDump dump, PLpgSQL_stmt_fetch *stmt)
 }
 
 static void
-dump_cursor_direction( FunctionDump dump, PLpgSQL_stmt_fetch *stmt)
+dump_cursor_direction( FunctionDumpContext dump, PLpgSQL_stmt_fetch *stmt)
 {
   switch (stmt->direction)
   {
@@ -626,14 +636,14 @@ dump_cursor_direction( FunctionDump dump, PLpgSQL_stmt_fetch *stmt)
 }
 
 static void
-dump_close( FunctionDump dump, PLpgSQL_stmt_close *stmt)
+dump_close( FunctionDumpContext dump, PLpgSQL_stmt_close *stmt)
 {
   append_string( dump.output, "<close/>" );
   printf("CLOSE curvar=%d\n", stmt->curvar);
 }
 
 static void
-dump_perform( FunctionDump dump, PLpgSQL_stmt_perform *stmt)
+dump_perform( FunctionDumpContext dump, PLpgSQL_stmt_perform *stmt)
 {
   append_string( dump.output, "<perform>" );
   printf("PERFORM expr = ");
@@ -643,7 +653,7 @@ dump_perform( FunctionDump dump, PLpgSQL_stmt_perform *stmt)
 }
 
 static void
-dump_exit( FunctionDump dump, PLpgSQL_stmt_exit *stmt)
+dump_exit( FunctionDumpContext dump, PLpgSQL_stmt_exit *stmt)
 {
   append_string( dump.output, "<exit>" );
   printf("%s", stmt->is_exit ? "EXIT" : "CONTINUE");
@@ -659,7 +669,7 @@ dump_exit( FunctionDump dump, PLpgSQL_stmt_exit *stmt)
 }
 
 static void
-dump_return( FunctionDump dump, PLpgSQL_stmt_return *stmt)
+dump_return( FunctionDumpContext dump, PLpgSQL_stmt_return *stmt)
 {
   append_string( dump.output, "<return>" );
   printf("RETURN ");
@@ -674,7 +684,7 @@ dump_return( FunctionDump dump, PLpgSQL_stmt_return *stmt)
 }
 
 static void
-dump_return_next( FunctionDump dump, PLpgSQL_stmt_return_next *stmt)
+dump_return_next( FunctionDumpContext dump, PLpgSQL_stmt_return_next *stmt)
 {
   append_string( dump.output, "<return_next>" );
   printf("RETURN NEXT ");
@@ -689,7 +699,7 @@ dump_return_next( FunctionDump dump, PLpgSQL_stmt_return_next *stmt)
 }
 
 static void
-dump_return_query( FunctionDump dump, PLpgSQL_stmt_return_query *stmt)
+dump_return_query( FunctionDumpContext dump, PLpgSQL_stmt_return_query *stmt)
 {
   append_string( dump.output, "<return_query>" );
   printf("RETURN QUERY ");
@@ -699,7 +709,7 @@ dump_return_query( FunctionDump dump, PLpgSQL_stmt_return_query *stmt)
 }
 
 static void
-dump_raise( FunctionDump dump, PLpgSQL_stmt_raise *stmt)
+dump_raise( FunctionDumpContext dump, PLpgSQL_stmt_raise *stmt)
 {
   append_string( dump.output, "<raise>" );
   ListCell   *lc;
@@ -716,7 +726,7 @@ dump_raise( FunctionDump dump, PLpgSQL_stmt_raise *stmt)
 }
 
 static void
-dump_execsql( FunctionDump dump, PLpgSQL_stmt_execsql *stmt)
+dump_execsql( FunctionDumpContext dump, PLpgSQL_stmt_execsql *stmt)
 {
   append_string( dump.output, "<execsql>" );
   printf("EXECSQL ");
@@ -725,42 +735,42 @@ dump_execsql( FunctionDump dump, PLpgSQL_stmt_execsql *stmt)
 
   if (stmt->rec != NULL)
   {
-    printf("    INTO%s target = %d %s\n",
-         stmt->strict ? " STRICT" : "",
-         stmt->rec->recno, stmt->rec->refname);
+//    printf("    INTO%s target = %d %s\n",
+//         stmt->strict ? " STRICT" : "",
+//         stmt->rec->recno, stmt->rec->refname);
   }
   if (stmt->row != NULL)
   {
-    printf("    INTO%s target = %d %s\n",
-         stmt->strict ? " STRICT" : "",
-         stmt->row->rowno, stmt->row->refname);
+//    printf("    INTO%s target = %d %s\n",
+//         stmt->strict ? " STRICT" : "",
+//         stmt->row->rowno, stmt->row->refname);
   }
   append_string( dump.output, "</execsql>" );
 }
 
 static void
-dump_dynexecute( FunctionDump dump, PLpgSQL_stmt_dynexecute *stmt)
+dump_dynexecute( FunctionDumpContext dump, PLpgSQL_stmt_dynexecute *stmt)
 {
   append_string( dump.output, "<execute>" );
   dump_expr( dump, stmt->query);
 
   if (stmt->rec != NULL)
   {
-    printf("    INTO%s target = %d %s\n",
-         stmt->strict ? " STRICT" : "",
-         stmt->rec->recno, stmt->rec->refname);
+//    printf("    INTO%s target = %d %s\n",
+//         stmt->strict ? " STRICT" : "",
+//         stmt->rec->recno, stmt->rec->refname);
   }
   if (stmt->row != NULL)
   {
-    printf("    INTO%s target = %d %s\n",
-         stmt->strict ? " STRICT" : "",
-         stmt->row->rowno, stmt->row->refname);
+//    printf("    INTO%s target = %d %s\n",
+//         stmt->strict ? " STRICT" : "",
+//         stmt->row->rowno, stmt->row->refname);
   }
   append_string( dump.output, "</execute>" );
 }
 
 static void
-dump_dynfors( FunctionDump dump, PLpgSQL_stmt_dynfors *stmt)
+dump_dynfors( FunctionDumpContext dump, PLpgSQL_stmt_dynfors *stmt)
 {
   append_string( dump.output, "<dynfors>" );
   printf("FORS %s EXECUTE ", (stmt->rec != NULL) ? stmt->rec->refname : stmt->row->refname);
@@ -774,7 +784,7 @@ dump_dynfors( FunctionDump dump, PLpgSQL_stmt_dynfors *stmt)
 }
 
 static void
-dump_getdiag( FunctionDump dump, PLpgSQL_stmt_getdiag *stmt)
+dump_getdiag( FunctionDumpContext dump, PLpgSQL_stmt_getdiag *stmt)
 {
   append_string( dump.output, "<getdiag>" );
   ListCell   *lc;
@@ -809,7 +819,7 @@ dump_getdiag( FunctionDump dump, PLpgSQL_stmt_getdiag *stmt)
 }
 
 static void
-dump_expr( FunctionDump dump, PLpgSQL_expr *expr )
+dump_expr( FunctionDumpContext dump, PLpgSQL_expr *expr )
 {
   int i;
   Oid * paramTypes;
@@ -818,18 +828,22 @@ dump_expr( FunctionDump dump, PLpgSQL_expr *expr )
   append_string( dump.output, "<query>%s</query>", expr->query );
   if (expr->nparams > 0)
   {
+    append_string( dump.output, "<parameters>" );
     paramTypes = (Oid *) palloc( expr->nparams * sizeof(Oid) );
     for (i = 0; i < expr->nparams; i++)
     {
       PLpgSQL_datum *datum;
       datum = dump.func->datums[expr->params[i]];
       paramTypes[i] = ((PLpgSQL_var *)dump.func->datums[expr->params[i]])->datatype->typoid;
-      append_string( dump.output, "<param>$%d=$%d</param>", i + 1, expr->params[i] );
+      append_string( dump.output, "<param outer=\"%d\" inner=\"%d\"/>", i + 1, expr->params[i] );
     }
+    append_string( dump.output, "</parameters>" );
   } else {
     paramTypes = NULL;
   }
+  append_string( dump.output, "<parse_tree>" );
   dump_sql_query( dump, expr->query, paramTypes, expr->nparams );
+  append_string( dump.output, "</parse_tree>" );
   append_string( dump.output, "</expression>" );
 }
 
