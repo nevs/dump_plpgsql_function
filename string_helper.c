@@ -37,3 +37,9 @@ append_string( char ** buffer, char * fmt, ... )
     return 0;
   }
 }
+
+void string_helper_init()
+{
+
+}
+

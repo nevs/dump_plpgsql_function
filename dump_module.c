@@ -3,6 +3,7 @@
 #include <fmgr.h>
 #include <utils/builtins.h>
 
+#include "string_helper.h"
 #include "dump_plpgsql_function.h"
 #include "dump_sql_parse_tree.h"
 
@@ -22,8 +23,8 @@ Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
     PG_RETURN_NULL();
 }
 
-PG_FUNCTION_INFO_V1(dump_plpgsql_function);
 
+PG_FUNCTION_INFO_V1(dump_plpgsql_function);
 
 Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
 {
@@ -34,5 +35,6 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
 
 void _PG_init()
 {
+  string_helper_init();
 }
 
