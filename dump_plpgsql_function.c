@@ -4,7 +4,6 @@
 #include <parser/parse_type.h>
 #include <nodes/nodeFuncs.h>
 #include <plpgsql.h>
-#include <lib/stringinfo.h>
 
 #include "dump_plpgsql_function.h"
 #include "dump_sql_parse_tree.h"
@@ -14,20 +13,16 @@
 
 
 
-PG_MODULE_MAGIC;
-
-
 /*
  * CREATE OR REPLACE FUNCTION dump_plpgsql_function(text) returns text AS '/home/sven/diplom/dump_plpgsql_function/dump_plpgsql_function.so', 'dump_plpgsql_function' LANGUAGE C STRICT;
  *
  */
 
-typedef struct dump_context {
+typedef struct function_dump_context {
   PLpgSQL_function * func;
   char ** output;
 } FunctionDumpContext;
 
-static char * dumptree(PLpgSQL_function *func);
 
 static void dump_stmt( FunctionDumpContext dump, PLpgSQL_stmt *stmt);
 static void dump_block( FunctionDumpContext dump, PLpgSQL_stmt_block *block);
@@ -54,12 +49,13 @@ static void dump_assign( FunctionDumpContext dump, PLpgSQL_stmt_assign *stmt);
 static void dump_if( FunctionDumpContext dump, PLpgSQL_stmt_if *stmt);
 
 
-PG_FUNCTION_INFO_V1(dump_plpgsql_function);
-
-
-Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
+const char * dump_plpgsql_function_internal( Oid func_oid )
 {
-  unsigned int funcoid = PG_GETARG_OID( 0 );
+  FunctionDumpContext dump;
+  char * output = NULL;
+  dump.output = &output;
+  int i;
+  PLpgSQL_datum *d;
 
   FunctionCallInfoData fake_fcinfo;
   FmgrInfo    flinfo;
@@ -71,26 +67,11 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
   MemSet(&fake_fcinfo, 0, sizeof(fake_fcinfo));
   MemSet(&flinfo, 0, sizeof(flinfo));
   fake_fcinfo.flinfo = &flinfo;
-  flinfo.fn_oid = funcoid;
+  flinfo.fn_oid = func_oid;
   flinfo.fn_mcxt = CurrentMemoryContext;
  
-  PLpgSQL_function * func;
-  func = plpgsql_compile(&fake_fcinfo, true);
- 
-  char * result = dumptree( func );
-
-  PG_RETURN_TEXT_P( cstring_to_text( result ) );
-}
-
-
-static char * dumptree(PLpgSQL_function *func)
-{
-  FunctionDumpContext dump;
-  char * output = NULL;
+  PLpgSQL_function * func = plpgsql_compile(&fake_fcinfo, true);
   dump.func = func;
-  dump.output = &output;
-  int i;
-  PLpgSQL_datum *d;
 
   append_string( dump.output, "<%s function_name=\"%s\">", ROOTNODENAME, func->fn_name ); 
 
@@ -174,9 +155,6 @@ static char * dumptree(PLpgSQL_function *func)
   append_string( dump.output, "</%s>", ROOTNODENAME ); 
   return *dump.output;
 }
-
-static void dump_parse_node( FunctionDumpContext dump, Node * node );
-
 
 static void dump_parse_node( FunctionDumpContext dump, Node * node ) {
   ListCell * item;
