@@ -4,7 +4,6 @@
 #include <stdarg.h>
 
 #include <postgres.h>
-#include <fmgr.h>
 
 #include "string_helper.h"
 

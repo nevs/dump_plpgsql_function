@@ -1,6 +1,5 @@
 
 #include <postgres.h>
-#include <fmgr.h>
 #include <parser/parse_type.h>
 #include <nodes/nodeFuncs.h>
 #include <plpgsql.h>

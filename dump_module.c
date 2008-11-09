@@ -32,4 +32,7 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
   PG_RETURN_TEXT_P( cstring_to_text( result ) );
 }
 
+void _PG_init()
+{
+}
 
