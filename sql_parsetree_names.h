@@ -1,3 +1,5 @@
 
-const char const * NodeTagNames[1000];
+const char const * NodeTagNames;
+const char * A_Expr_Kind_Names;
+
 
