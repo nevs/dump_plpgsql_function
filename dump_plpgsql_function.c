@@ -1,7 +1,4 @@
 
-#define _GNU_SOURCE
-#include <stdio.h>
-
 #include <postgres.h>
 #include <fmgr.h>
 #include <parser/parse_type.h>
@@ -10,8 +7,10 @@
 #include <lib/stringinfo.h>
 
 #include "dump_plpgsql_function.h"
+#include "string_helper.h"
 
 #define ROOTNODENAME "function_tree"
+
 
 
 PG_MODULE_MAGIC;
@@ -54,37 +53,6 @@ static void dump_assign( FunctionDumpContext dump, PLpgSQL_stmt_assign *stmt);
 static void dump_if( FunctionDumpContext dump, PLpgSQL_stmt_if *stmt);
 
 
-/** helper function to append c string to existing c string */
-static int 
-__attribute__ ((format (printf, 2, 3)))
-append_string( char ** buffer, char * fmt, ... )
-{
-  va_list ap;
-  char * tmp;
-
-  va_start(ap, fmt);
-  if ( vasprintf(&tmp, fmt, ap) == -1 ) {
-    /* error */
-    return -1;
-  } else {
-    size_t offset = 0;
-    if ( !*buffer ) {
-      *buffer = (char *) palloc( strlen( tmp ) + 1 );
-    } else {
-      offset = strlen( *buffer );
-      *buffer = (char *) repalloc( *buffer, offset + strlen( tmp ) + 1 );
-    }
-    if (!*buffer) {
-      free( tmp );
-      return -1;
-    } else {
-      memcpy( *buffer + offset, tmp, strlen(tmp) + 1 );
-      free( tmp );
-    }
-    return 0;
-  }
-}
-
 PG_FUNCTION_INFO_V1(dump_plpgsql_function);
 
 
@@ -113,25 +81,6 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
   PG_RETURN_TEXT_P( cstring_to_text( result ) );
 }
 
-
-static void dump_sql_query( FunctionDumpContext dump, const char * query_string, Oid *paramTypes, int numParams );
-
-PG_FUNCTION_INFO_V1(dump_sql_parse_tree);
-Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
-{
-  FunctionDumpContext dump;
-  char * output = NULL;
-  dump.output = &output;
-
-  const char * input = PG_GETARG_TEXT_P( 0 )->vl_dat;
-
-  dump_sql_query( dump, input, NULL, 0 );
-
-  if ( *dump.output )
-    PG_RETURN_TEXT_P( cstring_to_text( *dump.output ) );
-  else 
-    PG_RETURN_NULL();
-}
 
 static char * dumptree(PLpgSQL_function *func)
 {
@@ -227,65 +176,6 @@ static char * dumptree(PLpgSQL_function *func)
 
 static void dump_parse_node( FunctionDumpContext dump, Node * node );
 
-bool parse_tree_walker( Node *node, FunctionDumpContext * dump )
-{
-  if (node == NULL) return false;
-
-  const char *tagname = NodeTag_Names[nodeTag(node)];
-
-  if (tagname) {
-    append_string( dump->output, "<%s>", tagname );
-  } else {
-    tagname = "node";
-    append_string( dump->output, "<%s tag=\"%d\">", tagname, nodeTag( node ) );
-  }
-
-  switch( nodeTag(node) ) {
-    case T_String:
-      append_string( dump->output, "%s", strVal( node ) );
-      break;
-    case T_A_Const: 
-      parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) dump );
-      break;
-    case T_A_Expr:
-      append_string( dump->output, "<operator type=\"%s\">", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
-      switch( ((A_Expr *)node)->kind ) {
-        case AEXPR_OP:
-          append_string( dump->output, "<name>" );
-          parse_tree_walker((Node *) ((A_Expr *)node)->name, (void *) dump );
-          append_string( dump->output, "</name>" );
-          break;
-        default:
-          break;
-      }
-      append_string( dump->output, "</operator>" );
-
-      append_string( dump->output, "<left>" );
-      parse_tree_walker((Node *) ((A_Expr *)node)->lexpr, (void *) dump );
-      append_string( dump->output, "</left>" );
-
-      append_string( dump->output, "<right>" );
-      parse_tree_walker((Node *) ((A_Expr *)node)->rexpr, (void *) dump );
-      append_string( dump->output, "</right>" );
-      break;
-    case T_A_Indirection:
-      parse_tree_walker((Node *) ((A_Indirection *)node)->arg, (void *) dump );
-
-    default: 
-      raw_expression_tree_walker(node, parse_tree_walker, (void *) dump );
-      break;
-  }
-
-  append_string( dump->output, "</%s>", tagname );
-
-  return false;
-}
-
-static void dump_sql_query( FunctionDumpContext dump, const char * query_string, Oid *paramTypes, int numParams )
-{
-  List * parsetree_list = pg_parse_query(query_string);
-  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, (void  *) &dump );
-}
 
 static void dump_parse_node( FunctionDumpContext dump, Node * node ) {
   ListCell * item;
@@ -305,7 +195,6 @@ static void dump_parse_node( FunctionDumpContext dump, Node * node ) {
       append_string( dump.output, "</select>" );
       break;
 /*
-  
     case T_A_Indirection:
       append_string( dump.output, "<A_Indirection>", nodeTag( node ) );
       append_string( dump.output, "<arg>" );
@@ -841,9 +730,7 @@ dump_expr( FunctionDumpContext dump, PLpgSQL_expr *expr )
   } else {
     paramTypes = NULL;
   }
-  append_string( dump.output, "<parse_tree>" );
-  dump_sql_query( dump, expr->query, paramTypes, expr->nparams );
-  append_string( dump.output, "</parse_tree>" );
+  append_string( dump.output, "<parse_tree>%s</parse_tree>", dump_sql_parse_tree_internal( expr->query ) );
   append_string( dump.output, "</expression>" );
 }
 

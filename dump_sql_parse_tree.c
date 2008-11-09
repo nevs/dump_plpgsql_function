@@ -9,16 +9,16 @@
 #include <plpgsql.h>
 #include <lib/stringinfo.h>
 
-#include "dump_plpgsql_function.h"
-#include "sql_nodetag_names.h"
+#include "string_helper.h"
+#include "dump_sql_parse_tree.h"
+#include "sql_parsetree_names.h"
 
 
 typedef struct dump_context {
-  PLpgSQL_function * func;
   char ** output;
 } DumpContext;
 
-static void dump_sql_query( DumpContext* dump, const char * query_string, Oid *paramTypes, int numParams );
+bool parse_tree_walker( Node *node, DumpContext * context );
 
 PG_MODULE_MAGIC;
 
@@ -26,18 +26,24 @@ PG_FUNCTION_INFO_V1(dump_sql_parse_tree);
 
 Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
 {
+  const char * input = PG_GETARG_TEXT_P( 0 )->vl_dat;
+  const char * output = dump_sql_parse_tree_internal( input );
+
+  if ( output )
+    PG_RETURN_TEXT_P( cstring_to_text( output ) );
+  else 
+    PG_RETURN_NULL();
+}
+
+const char * dump_sql_parse_tree_internal( const char * query ) {
   DumpContext context;
   char * output = NULL;
   context.output = &output;
 
-  const char * input = PG_GETARG_TEXT_P( 0 )->vl_dat;
+  List * parsetree_list = pg_parse_query( query );
+  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, (void  *) &context );
 
-  dump_sql_query( &context, input, NULL, 0 );
-
-  if ( *context.output )
-    PG_RETURN_TEXT_P( cstring_to_text( *context.output ) );
-  else 
-    PG_RETURN_NULL();
+  return *context.output;
 }
 
 bool parse_tree_walker( Node *node, DumpContext * context )
@@ -94,8 +100,3 @@ bool parse_tree_walker( Node *node, DumpContext * context )
   return false;
 }
 
-static void dump_sql_query( DumpContext* context, const char * query_string, Oid *paramTypes, int numParams )
-{
-  List * parsetree_list = pg_parse_query(query_string);
-  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, (void  *) context );
-}
