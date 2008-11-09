@@ -85,3 +85,47 @@ bool parse_tree_walker( Node *node, DumpContext * context )
   return false;
 }
 
+static void dump_parse_node( DumpContext dump, Node * node ) {
+  ListCell * item;
+  switch( nodeTag( node ) ) {
+    case T_SelectStmt:
+      append_string( dump.output, "<select>" );
+      SelectStmt * select = (SelectStmt *) node;
+      printf("setop: %d left: %p right: %p\n", select->op, select->larg, select->rarg );
+      printf("where: %p from: %p into: %p\n", select->whereClause, select->fromClause, select->intoClause );
+      append_string( dump.output, "<targets>" );
+      foreach( item, select->targetList)
+        dump_parse_node( dump, lfirst( item ) );
+      append_string( dump.output, "</targets>" );
+      append_string( dump.output, "</select>" );
+      break;
+/*
+    case T_A_Indirection:
+      append_string( dump.output, "<A_Indirection>", nodeTag( node ) );
+      append_string( dump.output, "<arg>" );
+      dump_parse_node( dump, ((A_Indirection * )node)->arg);
+      append_string( dump.output, "</arg>" );
+      append_string( dump.output, "</A_Indirection>", nodeTag( node ) );
+      break;
+*/
+    case T_ResTarget:
+      append_string( dump.output, "<result_target>" );
+      ResTarget * target = (ResTarget *) node;
+      if (target->name)
+        append_string( dump.output, "<name>%s</name>", target->name );
+      append_string( dump.output, "<value>" );
+      dump_parse_node( dump, target->val );
+      append_string( dump.output, "</value>" );
+      if (target->indirection) {
+        append_string( dump.output, "<indirection>" );
+        foreach( item, target->indirection )
+          dump_parse_node( dump, lfirst( item ) );
+        append_string( dump.output, "</indirection>" );
+      }
+      append_string( dump.output, "</result_target>" );
+      break;
+    default:
+      break;
+  }
+}
+
