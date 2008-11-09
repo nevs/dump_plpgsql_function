@@ -1,4 +1,10 @@
 
+#include <postgres.h>
+#include <fmgr.h>
+#include <parser/parse_type.h>
+#include <nodes/nodes.h>
+
+
 const char const * NodeTagNames[1000] = {
   [T_Invalid] = "Invalid",
   [T_IndexInfo] = "IndexInfo",
