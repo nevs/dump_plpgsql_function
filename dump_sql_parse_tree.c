@@ -20,21 +20,6 @@ typedef struct dump_context {
 
 bool parse_tree_walker( Node *node, DumpContext * context );
 
-PG_MODULE_MAGIC;
-
-PG_FUNCTION_INFO_V1(dump_sql_parse_tree);
-
-Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
-{
-  const char * input = PG_GETARG_TEXT_P( 0 )->vl_dat;
-  const char * output = dump_sql_parse_tree_internal( input );
-
-  if ( output )
-    PG_RETURN_TEXT_P( cstring_to_text( output ) );
-  else 
-    PG_RETURN_NULL();
-}
-
 const char * dump_sql_parse_tree_internal( const char * query ) {
   DumpContext context;
   char * output = NULL;
@@ -50,7 +35,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 {
   if (node == NULL) return false;
 
-  const char *tagname = NodeTagNames[nodeTag(node)];
+  const char *tagname = NodeTagNames[(int)nodeTag(node)];
 
   if (tagname) {
     append_string( context->output, "<%s>", tagname );

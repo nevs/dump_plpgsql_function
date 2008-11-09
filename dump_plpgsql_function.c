@@ -7,6 +7,7 @@
 #include <lib/stringinfo.h>
 
 #include "dump_plpgsql_function.h"
+#include "dump_sql_parse_tree.h"
 #include "string_helper.h"
 
 #define ROOTNODENAME "function_tree"
