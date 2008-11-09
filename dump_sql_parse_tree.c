@@ -3,10 +3,8 @@
 #include <stdio.h>
 
 #include <postgres.h>
-#include <parser/parse_type.h>
+#include <parser/parser.h>
 #include <nodes/nodeFuncs.h>
-#include <plpgsql.h>
-#include <lib/stringinfo.h>
 
 #include "string_helper.h"
 #include "dump_sql_parse_tree.h"
@@ -20,14 +18,13 @@ typedef struct dump_context {
 bool parse_tree_walker( Node *node, DumpContext * context );
 
 const char * dump_sql_parse_tree_internal( const char * query ) {
-  DumpContext context;
-  char * output = NULL;
-  context.output = &output;
+  DumpContext * context = palloc0( sizeof( DumpContext ) );
+  context->output = palloc0( sizeof( char *));
 
-  List * parsetree_list = pg_parse_query( query );
-  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, (void  *) &context );
+  List * parsetree_list = raw_parser( query );
+  raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, context );
 
-  return *context.output;
+  return *context->output;
 }
 
 bool parse_tree_walker( Node *node, DumpContext * context )
