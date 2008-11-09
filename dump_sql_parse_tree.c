@@ -35,7 +35,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 {
   if (node == NULL) return false;
 
-  const char *tagname = NodeTagNames[(int)nodeTag(node)];
+  const char *tagname = NodeTagNames[nodeTag(node)];
 
   if (tagname) {
     append_string( context->output, "<%s>", tagname );
