@@ -1,9 +1,12 @@
 
-PLPGSQLSRC=/home/sven/diplom/postgresql/src/pl/plpgsql/src
 PREFIX=/home/sven/diplom/local/
 
+PGSERVERINCLUDE=`${PREFIX}/bin/pg_config --includedir-server`
+PGLIBDIR=`${PREFIX}/bin/pg_config --pkglibdir`
+PLPGSQLSRC=/home/sven/diplom/postgresql/src/pl/plpgsql/src
 
-INCLUDE= -I${PREFIX}include/postgresql/server -I${PLPGSQLSRC}
+
+INCLUDE= -I${PGSERVERINCLUDE} -I${PLPGSQLSRC}
 
 CFLAGS= -fpic -Wall -g ${INCLUDE} -L${PREFIX}lib
 
@@ -16,7 +19,7 @@ default: binary
 binary: dump_module.so
 
 dump_module.so: Makefile ${OBJECTS}
-		gcc ${CFLAGS} -shared -o dump_module.so ${OBJECTS} ${PREFIX}lib/postgresql/plpgsql.so
+		gcc ${CFLAGS} -shared -o dump_module.so ${OBJECTS} ${PGLIBDIR}/plpgsql.so
 
 clean:
 		rm *.so *.o
