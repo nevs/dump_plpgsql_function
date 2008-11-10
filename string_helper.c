@@ -16,32 +16,35 @@ append_string( char ** buffer, char * fmt, ... )
   va_list ap;
   char * tmp;
 
-  va_start(ap, fmt);
-  if ( vasprintf(&tmp, fmt, ap) == -1 ) {
+  va_start( ap, fmt );
+  int len = vasprintf(&tmp, fmt, ap);
+  va_end( ap );
+
+  if ( len == -1 ) {
     /* error */
     return -1;
   } else {
     size_t offset = 0;
     if ( !*buffer ) {
-      *buffer = (char *) palloc( strlen( tmp ) + 1 );
+      *buffer = (char *) palloc( len + 1 );
     } else {
       offset = strlen( *buffer );
-      *buffer = (char *) repalloc( *buffer, offset + strlen( tmp ) + 1 );
+      *buffer = (char *) repalloc( *buffer, offset + len + 1 );
     }
     if (!*buffer) {
       free( tmp );
       return -1;
     } else {
-      memcpy( *buffer + offset, tmp, strlen(tmp) + 1 );
+      memcpy( *buffer + offset, tmp, len + 1 );
       free( tmp );
     }
-    return 0;
+    return len;
   }
 }
 
 /*
  * FIXME: This is not safe for all encodings.
- *
+ * FIXME: integer overflow
  */
 
 static int print_xml(FILE *stream, const struct printf_info *info, const void *const *args)
@@ -61,6 +64,13 @@ static int print_xml(FILE *stream, const struct printf_info *info, const void *c
         break;
       case '&':
         len = fprintf( stream, "%s", "&amp;" );
+        break;
+      case '"':
+        if ( info->spec == 'N' ) {
+          len = fprintf( stream, "%s", "&quot;" );
+        } else {
+          len = fprintf( stream, "%c", *xml );
+        }
         break;
       default:
         len = fprintf( stream, "%c", *xml );
@@ -87,21 +97,78 @@ static int print_xml_arginfo (const struct printf_info *info, size_t n, int *arg
 void string_helper_init()
 {
   register_printf_function('M', print_xml, print_xml_arginfo);
+  register_printf_function('N', print_xml, print_xml_arginfo);
 }
 
 int xml_tag( DumpContext * context, const char * tagname, ... )
 {
-  return append_string( context->output, "<%M/>", tagname );
+  va_list ap;
+  int written = 0, len;
+
+  len = append_string( context->output, "<%N", tagname );
+  if ( len < 0 ) return len;
+  written += len;
+
+  va_start( ap, tagname );
+  len = xml_attributes( context, ap );
+  va_end( ap );
+  if ( len < 0 ) return len;
+  written += len;
+
+  len = append_string( context->output, "/>" );
+  if ( len < 0 ) return len;
+  written += len;
+
+  return written;
 }
 
 int xml_tag_open( DumpContext * context, const char * tagname, ... )
 {
-  return append_string( context->output, "<%M>", tagname );
+  va_list ap;
+  int written = 0, len;
+
+  len = append_string( context->output, "<%N", tagname );
+  if ( len < 0 ) return len;
+  written += len;
+
+  va_start( ap, tagname );
+  len = xml_attributes( context, ap );
+  va_end( ap );
+  if ( len < 0 ) return len;
+  written += len;
+
+  len = append_string( context->output, ">" );
+  if ( len < 0 ) return len;
+  written += len;
+
+  return written;
+}
+
+int xml_attributes( DumpContext * context, va_list ap )
+{
+  int written = 0, len;
+  char *attribute, *value;
+  while( 1 ) {
+    attribute = va_arg( ap, char * );
+    if ( attribute ) {
+      value = va_arg( ap, char * );
+      if ( value ) {
+        len = append_string( context->output, " %N=\"%N\"", attribute, value );
+        if ( len < 0 ) return len;
+        written += len;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  return written;
 }
 
 int xml_tag_close( DumpContext * context, const char * tagname )
 {
-  return append_string( context->output, "</%M>", tagname );
+  return append_string( context->output, "</%N>", tagname );
 }
 
 int xml_content( DumpContext * context, const char * content )

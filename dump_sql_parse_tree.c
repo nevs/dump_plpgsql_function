@@ -30,7 +30,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 
   const char *tagname = NodeTagNames[nodeTag(node)] ? : "node";
 
-  xml_tag_open( context, tagname, "nodeTag", nodeTag( node ) );
+  xml_tag_open( context, tagname, NULL );
 
   switch( nodeTag(node) ) {
     case T_String:
@@ -43,22 +43,22 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       append_string( context->output, "<Operator type=\"%s\">", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
       switch( ((A_Expr *)node)->kind ) {
         case AEXPR_OP:
-          append_string( context->output, "<Name>" );
+          xml_tag_open( context, "Name", NULL );
           parse_tree_walker((Node *) ((A_Expr *)node)->name, (void *) context );
-          append_string( context->output, "</Name>" );
+          xml_tag_close( context, "Name" );
           break;
         default:
           break;
       }
-      append_string( context->output, "</Operator>" );
+      xml_tag_close( context, "Operator" );
 
-      append_string( context->output, "<Left>" );
+      xml_tag_open( context, "Left", NULL );
       parse_tree_walker((Node *) ((A_Expr *)node)->lexpr, (void *) context );
-      append_string( context->output, "</Left>" );
+      xml_tag_close( context, "Left" );
 
-      append_string( context->output, "<Right>" );
+      xml_tag_open( context, "Right", NULL );
       parse_tree_walker((Node *) ((A_Expr *)node)->rexpr, (void *) context );
-      append_string( context->output, "</Right>" );
+      xml_tag_close( context, "Right" );
       break;
     case T_A_Indirection:
       parse_tree_walker((Node *) ((A_Indirection *)node)->arg, (void *) context );
@@ -68,7 +68,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       break;
   }
 
-  append_string( context->output, "</%s>", tagname );
+  xml_tag_close( context, tagname );
 
   return retval;
 }
