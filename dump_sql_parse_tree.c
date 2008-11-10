@@ -1,7 +1,4 @@
 
-#define _GNU_SOURCE
-#include <stdio.h>
-
 #include <postgres.h>
 #include <parser/parser.h>
 #include <nodes/nodeFuncs.h>
@@ -40,7 +37,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) context );
       break;
     case T_A_Expr:
-      append_string( context->output, "<Operator type=\"%s\">", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
+      xml_tag_open( context, "Operator", "type", A_Expr_Kind_Names[((A_Expr *)node)->kind], NULL );
       switch( ((A_Expr *)node)->kind ) {
         case AEXPR_OP:
           xml_tag_open( context, "Name", NULL );
