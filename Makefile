@@ -29,5 +29,6 @@ nice: binary
 		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -
 
 .PHONY: clean binary test nice
-.DEFAULT: binary
+
+.DEFAULT: test
 

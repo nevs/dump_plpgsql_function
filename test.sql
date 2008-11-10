@@ -23,6 +23,6 @@ CREATE OR REPLACE FUNCTION dump_sql_parse_tree(text) returns text AS '/home/sven
 
 --SELECT * from dump_plpgsql_function('simple_test()'::regprocedure);
 
-SELECT * from dump_sql_parse_tree($$SELECT 'chunky' || 'bacon'$$);
+SELECT * from dump_sql_parse_tree($$SELECT 'chunky' || 'bacon';$$);
 
 
