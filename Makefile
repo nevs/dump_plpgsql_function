@@ -14,6 +14,8 @@ HEADER_FILES= $(wildcard *.h)
 SOURCE_FILES= $(wildcard *.c)
 OBJECTS= $(patsubst %.c,%.o, ${SOURCE_FILES})
 
+all: test
+
 binary: dump_module.so
 
 dump_module.so: Makefile ${OBJECTS}
@@ -28,7 +30,5 @@ test: binary
 nice: binary
 		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -
 
-.PHONY: clean binary test nice
-
-.DEFAULT: test
+.PHONY: all clean binary test nice
 
