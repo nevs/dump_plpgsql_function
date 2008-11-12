@@ -134,7 +134,7 @@ int xml_tag( DumpContext * context, const char * tagname, ... )
 int xml_tag_open( DumpContext * context, const char * tagname, ... )
 {
   va_list ap;
-  int written = 0, len, i;
+  int written = 0, len;
 
   xml_indent( context );
 
@@ -160,13 +160,16 @@ int xml_tag_open( DumpContext * context, const char * tagname, ... )
 int xml_attributes( DumpContext * context, va_list ap )
 {
   int written = 0, len;
-  char *attribute, *value;
+  char *attribute, *format, *tmp;
   while( 1 ) {
     attribute = va_arg( ap, char * );
     if ( attribute ) {
-      value = va_arg( ap, char * );
-      if ( value ) {
-        len = append_string( context->output, " %N=\"%N\"", attribute, value );
+      format = va_arg( ap, char * );
+      if ( format ) {
+        len = vasprintf(&tmp, format, ap);
+        if ( len < 0 ) return len;
+        
+        len = append_string( context->output, " %N=\"%N\"", attribute, tmp );
         if ( len < 0 ) return len;
         written += len;
       } else {
