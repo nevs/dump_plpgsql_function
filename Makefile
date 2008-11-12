@@ -25,7 +25,7 @@ clean:
 		rm *.so *.o
 
 test: binary
-		${PREFIX}bin/psql < test.sql
+		${PREFIX}bin/psql -e < test.sql
 
 check: binary
 		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -

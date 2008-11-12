@@ -170,6 +170,7 @@ int xml_attributes( DumpContext * context, va_list ap )
         if ( len < 0 ) return len;
         
         len = append_string( context->output, " %N=\"%N\"", attribute, tmp );
+        free( tmp );
         if ( len < 0 ) return len;
         written += len;
       } else {

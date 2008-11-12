@@ -24,7 +24,13 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 {
   bool retval = false;
 
-  if (node == NULL) return retval;
+  if (node == NULL) {
+    xml_tag( context, "NULL", NULL );
+    return false;
+  }
+    
+
+
 
   const char *tagname = NodeTagNames[nodeTag(node)] ? : "node";
 
@@ -41,20 +47,67 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 
       switch( nodeTag(node) ) {
         case T_SelectStmt:
-          xml_tag_open( context, "into_clause", NULL );
-          parse_tree_walker((Node *) ((SelectStmt *)node)->intoClause, (void *) context );
-          xml_tag_close( context, "into_clause" );
+          if (((SelectStmt *)node)->intoClause) {
+            xml_tag_open( context, "into_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->intoClause, (void *) context );
+            xml_tag_close( context, "into_clause" );
+          }
 
-          xml_tag_open( context, "distinct_clause", NULL );
-          parse_tree_walker((Node *) ((SelectStmt *)node)->distinctClause, (void *) context );
-          xml_tag_close( context, "distinct_clause" );
+          if (((SelectStmt *)node)->distinctClause) {
+            xml_tag_open( context, "distinct_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->distinctClause, (void *) context );
+            xml_tag_close( context, "distinct_clause" );
+          }
 
-          xml_tag_open( context, "targets", NULL );
-          parse_tree_walker((Node *) ((SelectStmt *)node)->targetList, (void *) context );
-          xml_tag_close( context, "targets" );
+          if (((SelectStmt *)node)->targetList) {
+            xml_tag_open( context, "targets", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->targetList, (void *) context );
+            xml_tag_close( context, "targets" );
+          }
+
+          if (((SelectStmt *)node)->havingClause) {
+            xml_tag_open( context, "having_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->havingClause, (void *) context );
+            xml_tag_close( context, "having_clause" );
+          }
+
+          if (((SelectStmt *)node)->withClause) {
+            xml_tag_open( context, "with_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->withClause, (void *) context );
+            xml_tag_close( context, "with_clause" );
+          }
+
+          if (((SelectStmt *)node)->fromClause) {
+            xml_tag_open( context, "from_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->fromClause, (void *) context );
+            xml_tag_close( context, "from_clause" );
+          }
+
+          if (((SelectStmt *)node)->whereClause) {
+            xml_tag_open( context, "where_clause", NULL );
+            parse_tree_walker((Node *) ((SelectStmt *)node)->whereClause, (void *) context );
+            xml_tag_close( context, "where_clause" );
+          }
 
           break;
+        case T_ResTarget:
+          if (((ResTarget *)node)->name) {
+            xml_tag( context, "name", "value", "%s", ((ResTarget *)node)->name, NULL );
+          }
 
+          if (((ResTarget *)node)->indirection) {
+            xml_tag_open( context, "indirection", NULL );
+            parse_tree_walker((Node *) ((ResTarget *)node)->indirection, (void *) context );
+            xml_tag_close( context, "indirection" );
+          }
+
+          if (((ResTarget *)node)->val) {
+            xml_tag_open( context, "value", NULL );
+            parse_tree_walker((Node *) ((ResTarget *)node)->val, (void *) context );
+            xml_tag_close( context, "value" );
+          }
+          break;
+          
         case T_A_Const: 
           parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) context );
           break;

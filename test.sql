@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION dump_plpgsql_function(oid) returns text AS '/home/sve
 CREATE OR REPLACE FUNCTION dump_sql_parse_tree(text) returns text AS '/home/sven/diplom/dump_plpgsql_function/dump_module.so', 'dump_sql_parse_tree' LANGUAGE C STRICT;
 
 --SELECT * from dump_plpgsql_function('simple_test()'::regprocedure);
+--SELECT * from dump_sql_parse_tree($$SELECT 'chunky' || 'bacon';$$);
 
-SELECT * from dump_sql_parse_tree($$SELECT 'chunky' || 'bacon';$$);
-
+SELECT dump_sql_parse_tree($$SELECT foo.f1 AS f4,f2 FROM pg_user;$$);
 
