@@ -27,7 +27,7 @@ clean:
 test: binary
 		${PREFIX}bin/psql < test.sql
 
-nice: binary
+check: binary
 		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -
 
 .PHONY: all clean binary test nice
