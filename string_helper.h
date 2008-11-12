@@ -15,6 +15,6 @@ int xml_tag( DumpContext * context, const char * tagname, ... ) __attribute__((s
 int xml_tag_open( DumpContext * context, const char * tagname, ... ) __attribute__((sentinel));
 int xml_tag_close( DumpContext * context, const char * tagname );
 int xml_attributes( DumpContext * context, va_list ap );
-int xml_content( DumpContext * context, const char * content );
+int xml_content( DumpContext * context, const char * fmt, ... ) __attribute__((format (printf,2,3)));
 
 

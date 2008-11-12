@@ -100,10 +100,19 @@ void string_helper_init()
   register_printf_function('N', print_xml, print_xml_arginfo);
 }
 
+static void xml_indent( DumpContext * context )
+{
+  int i;
+  for( i=0; i<context->indent; i++ )
+    append_string( context->output, "  " );
+}
+
 int xml_tag( DumpContext * context, const char * tagname, ... )
 {
   va_list ap;
   int written = 0, len;
+
+  xml_indent( context );
 
   len = append_string( context->output, "<%N", tagname );
   if ( len < 0 ) return len;
@@ -115,7 +124,7 @@ int xml_tag( DumpContext * context, const char * tagname, ... )
   if ( len < 0 ) return len;
   written += len;
 
-  len = append_string( context->output, "/>" );
+  len = append_string( context->output, "/>\n" );
   if ( len < 0 ) return len;
   written += len;
 
@@ -125,7 +134,9 @@ int xml_tag( DumpContext * context, const char * tagname, ... )
 int xml_tag_open( DumpContext * context, const char * tagname, ... )
 {
   va_list ap;
-  int written = 0, len;
+  int written = 0, len, i;
+
+  xml_indent( context );
 
   len = append_string( context->output, "<%N", tagname );
   if ( len < 0 ) return len;
@@ -137,9 +148,11 @@ int xml_tag_open( DumpContext * context, const char * tagname, ... )
   if ( len < 0 ) return len;
   written += len;
 
-  len = append_string( context->output, ">" );
+  len = append_string( context->output, ">\n" );
   if ( len < 0 ) return len;
   written += len;
+
+  context->indent++;
 
   return written;
 }
@@ -168,11 +181,21 @@ int xml_attributes( DumpContext * context, va_list ap )
 
 int xml_tag_close( DumpContext * context, const char * tagname )
 {
-  return append_string( context->output, "</%N>", tagname );
+  context->indent--;
+  xml_indent( context );
+  return append_string( context->output, "</%N>\n", tagname );
 }
 
-int xml_content( DumpContext * context, const char * content )
+int xml_content( DumpContext * context, const char * fmt, ... )
 {
-  return append_string( context->output, "%M", content );
+  va_list ap;
+  char * tmp;
+
+  va_start( ap, fmt );
+  int len = vasprintf(&tmp, fmt, ap);
+  va_end( ap );
+
+  xml_indent( context );
+  return append_string( context->output, "%M\n", tmp );
 }
 
