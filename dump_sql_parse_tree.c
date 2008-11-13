@@ -7,6 +7,8 @@
 #include "dump_sql_parse_tree.h"
 #include "sql_parsetree_names.h"
 
+#define CHILD_NODE( type, child ) conditional_child_node( ((type *)node)->child, context, #child)
+
 
 bool parse_tree_walker( Node *node, DumpContext * context );
 
@@ -20,7 +22,7 @@ const char * dump_sql_parse_tree_internal( const char * query ) {
   return *context->output;
 }
 
-bool conditional_walker( Node * node, DumpContext * context, const char * tagname )
+bool conditional_child_node( Node * node, DumpContext * context, const char * tagname )
 {
   bool retval = false;
 
@@ -57,72 +59,42 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 
       switch( nodeTag(node) ) {
         case T_SelectStmt:
-          conditional_walker( ((SelectStmt*)node)->intoClause, context, "intoClause" ); 
-          conditional_walker( ((SelectStmt*)node)->distinctClause, context, "distinctClause" ); 
-          conditional_walker( ((SelectStmt*)node)->havingClause, context, "havingClause" ); 
-          conditional_walker( ((SelectStmt*)node)->groupClause, context, "groupClause" ); 
-          conditional_walker( ((SelectStmt*)node)->withClause, context, "withClause" ); 
-          conditional_walker( ((SelectStmt*)node)->fromClause, context, "fromClause" ); 
-          conditional_walker( ((SelectStmt*)node)->whereClause, context, "whereClause" ); 
-          conditional_walker( ((SelectStmt*)node)->targetList, context, "targets" ); 
-
+          CHILD_NODE( SelectStmt, intoClause );
+          CHILD_NODE( SelectStmt, distinctClause );
+          CHILD_NODE( SelectStmt, havingClause );
+          CHILD_NODE( SelectStmt, groupClause );
+          CHILD_NODE( SelectStmt, withClause );
+          CHILD_NODE( SelectStmt, fromClause );
+          CHILD_NODE( SelectStmt, whereClause );
+          CHILD_NODE( SelectStmt, targetList );
           break;
         case T_ResTarget:
           if (((ResTarget *)node)->name) {
             xml_tag( context, "name", "value", "%s", ((ResTarget *)node)->name, NULL );
           }
+          CHILD_NODE( ResTarget, indirection );
+          CHILD_NODE( ResTarget, val );
 
-          if (((ResTarget *)node)->indirection) {
-            xml_tag_open( context, "indirection", NULL );
-            parse_tree_walker((Node *) ((ResTarget *)node)->indirection, (void *) context );
-            xml_tag_close( context, "indirection" );
-          }
-
-          if (((ResTarget *)node)->val) {
-            xml_tag_open( context, "value", NULL );
-            parse_tree_walker((Node *) ((ResTarget *)node)->val, (void *) context );
-            xml_tag_close( context, "value" );
-          }
           break;
           
         case T_A_Const: 
           parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) context );
           break;
         case T_FuncCall:
-          xml_tag_open( context, "function_name", NULL );
-          parse_tree_walker((Node *) ((FuncCall *)node)->funcname, (void *) context );
-          xml_tag_close( context, "function_name" );
-
-          xml_tag_open( context, "arguments", NULL );
-          parse_tree_walker((Node *) ((FuncCall *)node)->args, (void *) context );
-          xml_tag_close( context, "arguments" );
+          CHILD_NODE( FuncCall, funcname );
+          CHILD_NODE( FuncCall, args );
 
           break;
         case T_ColumnRef:
-          xml_tag_open( context, "fields", NULL );
-          parse_tree_walker((Node *) ((ColumnRef *)node)->fields, (void *) context );
-          xml_tag_close( context, "fields" );
+          CHILD_NODE( ColumnRef, fields );
           break;
         case T_A_Expr:
           xml_tag_open( context, "operator", "type", A_Expr_Kind_Names[((A_Expr *)node)->kind], NULL );
-          switch( ((A_Expr *)node)->kind ) {
-            case AEXPR_OP:
-              xml_tag_open( context, "name", NULL );
-              parse_tree_walker((Node *) ((A_Expr *)node)->name, (void *) context );
-              xml_tag_close( context, "name" );
-              break;
-            default:
-              break;
-          }
+          CHILD_NODE( A_Expr, name );
           xml_tag_close( context, "operator" );
 
-          xml_tag_open( context, "left", NULL );
-          parse_tree_walker((Node *) ((A_Expr *)node)->lexpr, (void *) context );
-          xml_tag_close( context, "left" );
-
-          xml_tag_open( context, "right", NULL );
-          parse_tree_walker((Node *) ((A_Expr *)node)->rexpr, (void *) context );
-          xml_tag_close( context, "right" );
+          CHILD_NODE( A_Expr, lexpr );
+          CHILD_NODE( A_Expr, rexpr );
           break;
         case T_A_Indirection:
           parse_tree_walker((Node *) ((A_Indirection *)node)->arg, (void *) context );
