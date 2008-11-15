@@ -7,6 +7,7 @@
 #include "dump_sql_parse_tree.h"
 #include "sql_parsetree_names.h"
 
+
 #define CHILD_NODE( type, child ) conditional_child_node( ((type *)node)->child, context, #child)
 
 
@@ -59,14 +60,14 @@ bool parse_tree_walker( Node *node, DumpContext * context )
 
       switch( nodeTag(node) ) {
         case T_SelectStmt:
-          CHILD_NODE( SelectStmt, intoClause );
           CHILD_NODE( SelectStmt, distinctClause );
-          CHILD_NODE( SelectStmt, havingClause );
-          CHILD_NODE( SelectStmt, groupClause );
-          CHILD_NODE( SelectStmt, withClause );
+          CHILD_NODE( SelectStmt, intoClause );
+          CHILD_NODE( SelectStmt, targetList );
           CHILD_NODE( SelectStmt, fromClause );
           CHILD_NODE( SelectStmt, whereClause );
-          CHILD_NODE( SelectStmt, targetList );
+          CHILD_NODE( SelectStmt, groupClause );
+          CHILD_NODE( SelectStmt, havingClause );
+          CHILD_NODE( SelectStmt, withClause );
           break;
         case T_ResTarget:
           if (((ResTarget *)node)->name) {
