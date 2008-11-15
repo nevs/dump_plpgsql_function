@@ -72,6 +72,14 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           TEXT_NODE( RangeVar, relname );
           CHILD_NODE( RangeVar, alias );
           break;
+        case T_JoinExpr:       // 340
+          xml_textnode( context, "jointype", "%s", JoinTypeNames[((JoinExpr *)node)->jointype] );
+          CHILD_NODE( JoinExpr, larg );
+          CHILD_NODE( JoinExpr, rarg );
+          CHILD_NODE( JoinExpr, using );
+          CHILD_NODE( JoinExpr, quals );
+          CHILD_NODE( JoinExpr, alias );
+          break;
         case T_A_Expr:         // 900
           xml_tag_open( context, "operator", "type", A_Expr_Kind_Names[((A_Expr *)node)->kind], NULL );
           CHILD_NODE( A_Expr, name );
