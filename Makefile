@@ -5,6 +5,7 @@ PGSERVERINCLUDE:= $(shell ${PREFIX}/bin/pg_config --includedir-server)
 PGLIBDIR:= $(shell ${PREFIX}/bin/pg_config --pkglibdir)
 PLPGSQLSRC:=/home/sven/diplom/postgresql/src/pl/plpgsql/src
 
+CWD:= $(shell pwd)
 
 INCLUDE= -I${PGSERVERINCLUDE} -I${PLPGSQLSRC}
 
@@ -24,11 +25,15 @@ dump_module.so: Makefile ${OBJECTS}
 clean:
 		rm *.so *.o
 
-test: binary
+test: install_functions
 		${PREFIX}bin/psql < test.sql
 
-check: binary
+check: install_functions
 		${PREFIX}bin/psql -t -q < test.sql | xmllint --format -
 
-.PHONY: all clean binary test nice
+install_functions: binary
+		${PREFIX}bin/psql -q -c "CREATE OR REPLACE FUNCTION dump_plpgsql_function(oid) returns text AS '${CWD}/dump_module.so', 'dump_plpgsql_function' LANGUAGE C STRICT;"
+		${PREFIX}bin/psql -q -c "CREATE OR REPLACE FUNCTION dump_sql_parse_tree(text) returns text AS '${CWD}/dump_module.so', 'dump_sql_parse_tree' LANGUAGE C STRICT;"
+
+.PHONY: all clean binary test nice install_functions
 
