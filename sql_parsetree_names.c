@@ -317,3 +317,14 @@ const char * SetOperationNames[5] = {
   [SETOP_EXCEPT] = "EXCEPT"
 };
 
+const char * JoinTypeNames[10] = {
+  [JOIN_INNER] = "INNER",
+  [JOIN_LEFT]  = "LEFT",
+  [JOIN_FULL]  = "FULL",
+  [JOIN_RIGHT] = "RIGHT",
+  [JOIN_SEMI]  = "SEMI",
+  [JOIN_ANTI]  = "ANTI",
+  [JOIN_UNIQUE_OUTER] = "UNIQUE_OUTER",
+  [JOIN_UNIQUE_INNER] = "UNIQUE_INNER"
+};
+
