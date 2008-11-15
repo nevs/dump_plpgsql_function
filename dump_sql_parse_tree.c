@@ -9,7 +9,7 @@
 
 
 #define CHILD_NODE( type, child ) conditional_child_node( (Node *)((type *)node)->child, context, #child)
-
+#define TEXT_NODE( type, child ) xml_textnode( context, #child, "%s", (Node *)((type *)node)->child ? : "" )
 
 bool parse_tree_walker( Node *node, DumpContext * context );
 
@@ -80,25 +80,25 @@ bool parse_tree_walker( Node *node, DumpContext * context )
             CHILD_NODE( SelectStmt, rarg );
           }
           break;
+        case T_RangeVar:
+          TEXT_NODE( RangeVar, catalogname );
+          TEXT_NODE( RangeVar, schemaname );
+          TEXT_NODE( RangeVar, relname );
+          CHILD_NODE( RangeVar, alias );
+          break;
         case T_ResTarget:
           if (((ResTarget *)node)->name) {
             xml_tag( context, "name", "value", "%s", ((ResTarget *)node)->name, NULL );
           }
           CHILD_NODE( ResTarget, indirection );
           CHILD_NODE( ResTarget, val );
-
           break;
-          
         case T_A_Const: 
           parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) context );
           break;
         case T_FuncCall:
           CHILD_NODE( FuncCall, funcname );
           CHILD_NODE( FuncCall, args );
-
-          break;
-        case T_ColumnRef:
-          CHILD_NODE( ColumnRef, fields );
           break;
         case T_A_Expr:
           xml_tag_open( context, "operator", "type", A_Expr_Kind_Names[((A_Expr *)node)->kind], NULL );
@@ -108,9 +108,13 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           CHILD_NODE( A_Expr, lexpr );
           CHILD_NODE( A_Expr, rexpr );
           break;
+        case T_ColumnRef:
+          CHILD_NODE( ColumnRef, fields );
+          break;
         case T_A_Indirection:
-          parse_tree_walker((Node *) ((A_Indirection *)node)->arg, (void *) context );
-
+          CHILD_NODE( A_Indirection, arg );
+          CHILD_NODE( A_Indirection, indirection );
+          break;
         default: 
           retval = raw_expression_tree_walker(node, parse_tree_walker, (void *) context );
           break;
