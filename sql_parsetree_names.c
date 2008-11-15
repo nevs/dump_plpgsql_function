@@ -310,3 +310,10 @@ const char * A_Expr_Kind_Names[1000] = {
   [AEXPR_IN] = "EXPR_IN"
 };
 
+const char * SetOperationNames[5] = {
+  [SETOP_NONE] = "NONE",
+  [SETOP_UNION] = "UNION",
+  [SETOP_INTERSECT] = "INTERSECT",
+  [SETOP_EXCEPT] = "EXCEPT"
+};
+

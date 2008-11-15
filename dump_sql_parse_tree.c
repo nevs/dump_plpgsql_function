@@ -8,7 +8,7 @@
 #include "sql_parsetree_names.h"
 
 
-#define CHILD_NODE( type, child ) conditional_child_node( ((type *)node)->child, context, #child)
+#define CHILD_NODE( type, child ) conditional_child_node( (Node *)((type *)node)->child, context, #child)
 
 
 bool parse_tree_walker( Node *node, DumpContext * context );
@@ -68,6 +68,17 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           CHILD_NODE( SelectStmt, groupClause );
           CHILD_NODE( SelectStmt, havingClause );
           CHILD_NODE( SelectStmt, withClause );
+          CHILD_NODE( SelectStmt, valuesLists );
+          CHILD_NODE( SelectStmt, sortClause );
+          CHILD_NODE( SelectStmt, limitOffset );
+          CHILD_NODE( SelectStmt, limitCount );
+          CHILD_NODE( SelectStmt, lockingClause );
+
+          if ( ((SelectStmt *)node)->op != SETOP_NONE ) {
+            xml_tag( context, "op", "value", "%s", SetOperationNames[((SelectStmt*)node)->op], NULL );
+            CHILD_NODE( SelectStmt, larg );
+            CHILD_NODE( SelectStmt, rarg );
+          }
           break;
         case T_ResTarget:
           if (((ResTarget *)node)->name) {
