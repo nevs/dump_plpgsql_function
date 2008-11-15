@@ -131,6 +131,34 @@ int xml_tag( DumpContext * context, const char * tagname, ... )
   return written;
 }
 
+int xml_textnode( DumpContext * context, const char * tagname, const char * format, ... )
+{
+  va_list ap;
+  int written = 0, len;
+
+  xml_indent( context );
+
+  len = append_string( context->output, "<%N>", tagname );
+  if ( len < 0 ) return len;
+  written += len;
+
+  va_start( ap, format );
+  char * tmp;
+  len = vasprintf( &tmp, format, ap );
+  va_end( ap );
+  if ( len < 0 ) return len;
+  len = append_string( context->output, "%M", tmp );
+  free( tmp );
+  if ( len < 0 ) return len;
+  written += len;
+
+  len = append_string( context->output, "</%N>\n", tagname );
+  if ( len < 0 ) return len;
+  written += len;
+
+  return written;
+}
+
 int xml_tag_open( DumpContext * context, const char * tagname, ... )
 {
   va_list ap;
