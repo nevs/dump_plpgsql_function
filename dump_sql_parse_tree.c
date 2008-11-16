@@ -15,9 +15,7 @@ extern const char * debug_query_string;
 bool parse_tree_walker( Node *node, DumpContext * context );
 
 const char * dump_sql_parse_tree_internal( const char * query ) {
-  DumpContext * context = palloc0( sizeof( DumpContext ) );
-  context->output = palloc0( sizeof( char *));
-
+  DumpContext * context = new_dump_context();
   debug_query_string = query;
 
   List * parsetree_list = raw_parser( query );

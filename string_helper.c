@@ -43,6 +43,8 @@ append_string( char ** buffer, char * fmt, ... )
 }
 
 /*
+ * printf format handler that does xml escaping
+ *
  * FIXME: This is not safe for all encodings.
  * FIXME: integer overflow
  */
@@ -105,6 +107,14 @@ static void xml_indent( DumpContext * context )
   int i;
   for( i=0; i<context->indent; i++ )
     append_string( context->output, "  " );
+}
+
+DumpContext * new_dump_context()
+{
+  DumpContext * context = palloc0( sizeof( DumpContext ) );
+  context->output = palloc0( sizeof( char *));
+
+  return context;
 }
 
 int xml_tag( DumpContext * context, const char * tagname, ... )
