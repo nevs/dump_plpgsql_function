@@ -36,5 +36,6 @@ Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
 void _PG_init()
 {
   string_helper_init();
+  plpgsql_HashTableInit();
 }
 
