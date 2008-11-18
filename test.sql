@@ -1,43 +1,13 @@
 
-BEGIN;
-  DROP FUNCTION simple_test();
-COMMIT;
-
-CREATE OR REPLACE FUNCTION simple_test() RETURNS TEXT AS $$
-  DECLARE
-  var_a TEXT;
-
-  BEGIN
-
-    var_a := 'version()';
-
-    EXECUTE 'SELECT ' OPERATOR(pg_catalog.||) var_a;
-
-    RETURN 'version: ' || version();
-
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION vulnerable() RETURNS TEXT AS $$
-  DECLARE
-  var_a TEXT;
-
-  BEGIN
-
-    var_a := 'version()';
-
-    EXECUTE 'SELECT ' OPERATOR(pg_catalog.||) var_a;
-
-    RETURN 'version: ' || version();
-
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION dump_plpgsql_function(oid) returns text AS '/home/sven/diplom/dump_plpgsql_function/dump_module.so', 'dump_plpgsql_function' LANGUAGE C STRICT;
-CREATE OR REPLACE FUNCTION dump_sql_parse_tree(text) returns text AS '/home/sven/diplom/dump_plpgsql_function/dump_module.so', 'dump_sql_parse_tree' LANGUAGE C STRICT;
-
---SELECT * from dump_plpgsql_function('simple_test()'::regprocedure);
---SELECT * from dump_sql_parse_tree($$SELECT 'chunky' || 'bacon';$$);
+-- CREATE OR REPLACE FUNCTION vuln_sql_injection_direct( stmt text ) RETURNS VOID AS $$
+--   BEGIN
+--     EXECUTE stmt;
+--     RETURN;
+--   END;
+-- $$ LANGUAGE plpgsql;
+-- 
 
 SELECT dump_sql_parse_tree($$SELECT foo.f1 AS f4,f2 FROM pg_user;$$);
+
+SELECT dump_plpgsql_function('vuln_sql_injection_direct(text)'::regprocedure);
 
