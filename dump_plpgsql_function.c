@@ -11,7 +11,7 @@
 #define ROOTNODENAME "function_tree"
 
 #define CHILD_NODE( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
-#define TEXT_NODE( type, child ) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child ? : "" )
+#define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
 
 
 /*
@@ -26,6 +26,7 @@ typedef struct function_dump_context {
 
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
+static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
 
 void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
 {
@@ -79,8 +80,10 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   xml_tag_open( context->dump, tagname, NULL );
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
-      xml_textnode( context->dump, "refname", "%s", ((PLpgSQL_var *)node)->refname );
+      // FIXME add more fields
+      TEXT_NODE( PLpgSQL_var, refname );
       CHILD_NODE( PLpgSQL_var, default_val );
+      break;
   }
   xml_tag_close( context->dump, tagname );
 }
@@ -95,13 +98,22 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
     case PLPGSQL_STMT_BLOCK:
       TEXT_NODE( PLpgSQL_stmt_block, label );
       xml_tag_open( context->dump, "body", NULL );
-      foreach( item, ((PLpgSQL_stmt_block *)node)->body ) {
+      foreach( item, ((PLpgSQL_stmt_block *)node)->body )
         dump_statement( context, lfirst( item ) );
-      }
       xml_tag_close( context->dump, "body" );
+      if (((PLpgSQL_stmt_block *)node)->exceptions) {
+        xml_tag_open( context->dump, "exceptions", NULL );
+        foreach( item, ((PLpgSQL_stmt_block *)node)->exceptions->exc_list )
+          dump_exception( context, lfirst( item ) );
+        xml_tag_close( context->dump, "exceptions" );
+      }
       break;
 
   };
   xml_tag_close( context->dump, tagname );
+}
+
+static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum )
+{
 }
 
