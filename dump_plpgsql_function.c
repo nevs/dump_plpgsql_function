@@ -10,7 +10,8 @@
 
 #define ROOTNODENAME "function_tree"
 
-#define CHILD_NODE( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
+#define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
+#define CHILD_EXPR( type, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)node)->child )
 #define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
 
 
@@ -25,6 +26,7 @@ typedef struct function_dump_context {
 } FunctionDumpContext;
 
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
+static void dump_expression( FunctionDumpContext * context, PLpgSQL_expr * expression );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
 
@@ -33,6 +35,15 @@ void child_statement( FunctionDumpContext * context, const char * tagname, PLpgS
   if ( statement ) {
     xml_tag_open( context->dump, tagname, NULL );
     dump_statement( context, statement );
+    xml_tag_close( context->dump, tagname );
+  }
+}
+
+void child_expression( FunctionDumpContext * context, const char * tagname, PLpgSQL_expr * expression )
+{
+  if ( expression ) {
+    xml_tag_open( context->dump, tagname, NULL );
+    dump_expression( context, expression );
     xml_tag_close( context->dump, tagname );
   }
 }
@@ -82,7 +93,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
     case PLPGSQL_DTYPE_VAR:
       // FIXME add more fields
       TEXT_NODE( PLpgSQL_var, refname );
-      CHILD_NODE( PLpgSQL_var, default_val );
+      CHILD_EXPR( PLpgSQL_var, default_val );
       break;
   }
   xml_tag_close( context->dump, tagname );
@@ -95,7 +106,7 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
 
   xml_tag_open( context->dump, tagname, NULL );
   switch( node->cmd_type ) {
-    case PLPGSQL_STMT_BLOCK:
+    case PLPGSQL_STMT_BLOCK:           // 0
       TEXT_NODE( PLpgSQL_stmt_block, label );
       xml_tag_open( context->dump, "body", NULL );
       foreach( item, ((PLpgSQL_stmt_block *)node)->body )
@@ -108,12 +119,25 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
         xml_tag_close( context->dump, "exceptions" );
       }
       break;
+    case PLPGSQL_STMT_RETURN:          // 10
+      CHILD_EXPR( PLpgSQL_stmt_return, expr );
+      break;
+    case PLPGSQL_STMT_DYNEXECUTE:      // 15
+      CHILD_EXPR( PLpgSQL_stmt_dynexecute, query );
+      break;
+    default:
+      xml_tag( context->dump, "node", "cmd_type", "%d", node->cmd_type, NULL );
+      break;
 
   };
   xml_tag_close( context->dump, tagname );
 }
 
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum )
+{
+}
+
+static void dump_expression( FunctionDumpContext * context, PLpgSQL_expr* expression )
 {
 }
 

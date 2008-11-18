@@ -3,6 +3,8 @@
 #include <fmgr.h>
 #include <utils/builtins.h>
 
+#include <plpgsql.h>
+
 #include "string_helper.h"
 #include "dump_plpgsql_function.h"
 #include "dump_sql_parse_tree.h"
