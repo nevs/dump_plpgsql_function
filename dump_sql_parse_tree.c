@@ -83,6 +83,9 @@ bool parse_tree_walker( Node *node, DumpContext * context )
         case T_ColumnRef:      // 901
           CHILD_NODE( ColumnRef, fields );
           break;
+        case T_ParamRef:       // 902
+          xml_textnode( context, "number", "%d", ((ParamRef*)node)->number );
+          break;
         case T_A_Const:        // 903
           parse_tree_walker((Node *) &(((A_Const *)node)->val), (void *) context );
           break;
@@ -121,6 +124,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           }
           break;
         default: 
+          xml_textnode( context, "id", "%d", nodeTag(node), NULL );
           retval = raw_expression_tree_walker(node, parse_tree_walker, (void *) context );
           break;
       }
