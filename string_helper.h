@@ -1,4 +1,6 @@
 
+#ifndef _STRING_HELPER_H
+#define _STRING_HELPER_H
 
 typedef struct dump_context {
   char ** output;
@@ -19,4 +21,5 @@ int xml_content( DumpContext * context, const char * fmt, ... ) __attribute__((f
 int xml_textnode( DumpContext * context, const char * tagname, const char * format, ... ) __attribute__((format (printf,3,4)));
 DumpContext * new_dump_context();
 
+#endif
 
