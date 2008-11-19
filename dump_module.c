@@ -17,10 +17,13 @@ PG_FUNCTION_INFO_V1(dump_sql_parse_tree);
 Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
 {
   char * query = text_to_cstring( PG_GETARG_TEXT_P( 0 ) );
-  const char * output = dump_sql_parse_tree_internal( query );
+  DumpContext * context = new_dump_context();
+  debug_query_string = query;
 
-  if ( output )
-    PG_RETURN_TEXT_P( cstring_to_text( output ) );
+  dump_sql_parse_tree_internal( context, query );
+
+  if ( *context->output )
+    PG_RETURN_TEXT_P( cstring_to_text( *context->output ) );
   else 
     PG_RETURN_NULL();
 }
