@@ -26,7 +26,6 @@ typedef struct function_dump_context {
 } FunctionDumpContext;
 
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
-static void dump_expression( FunctionDumpContext * context, PLpgSQL_expr * expression );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
 
@@ -43,7 +42,7 @@ void child_expression( FunctionDumpContext * context, const char * tagname, PLpg
 {
   if ( expression ) {
     xml_tag_open( context->dump, tagname, NULL );
-    dump_expression( context, expression );
+    dump_datum( context, (PLpgSQL_datum *) expression );
     xml_tag_close( context->dump, tagname );
   }
 }
@@ -95,6 +94,11 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       TEXT_NODE( PLpgSQL_var, refname );
       CHILD_EXPR( PLpgSQL_var, default_val );
       break;
+    case PLPGSQL_DTYPE_EXPR:
+      xml_tag_open( context->dump, "query", NULL );
+      dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
+      xml_tag_close( context->dump, "query" );
+      break;
   }
   xml_tag_close( context->dump, tagname );
 }
@@ -134,10 +138,6 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
 }
 
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum )
-{
-}
-
-static void dump_expression( FunctionDumpContext * context, PLpgSQL_expr* expression )
 {
 }
 
