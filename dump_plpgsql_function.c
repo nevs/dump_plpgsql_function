@@ -96,6 +96,15 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       break;
     case PLPGSQL_DTYPE_EXPR:
       xml_tag_open( context->dump, "query", NULL );
+      if (((PLpgSQL_expr *)node)->query ) {
+        xml_tag_open( context->dump, "params", NULL );
+        int i;
+        for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
+          xml_tag( context->dump, "param", "index", "%d", ((PLpgSQL_expr *)node)->params[i], NULL );
+        }
+        xml_tag_close( context->dump, "params" );
+      }
+
       dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
       xml_tag_close( context->dump, "query" );
       break;
@@ -127,6 +136,12 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
       break;
     case PLPGSQL_STMT_DYNEXECUTE:      // 15
+      if (((PLpgSQL_stmt_dynexecute *)node)->params) {
+        xml_tag_open( context->dump, "params", NULL );
+        foreach( item, ((PLpgSQL_stmt_dynexecute *)node)->params)
+          dump_datum( context, lfirst( item ) );
+        xml_tag_close( context->dump, "params" );
+      }
       CHILD_EXPR( PLpgSQL_stmt_dynexecute, query );
       break;
     default:

@@ -11,6 +11,8 @@ INCLUDE= -I${PGSERVERINCLUDE} -I${PLPGSQLSRC}
 
 CFLAGS= -fpic -Wall -g ${INCLUDE} -L${PREFIX}lib
 
+CC=gcc
+
 HEADER_FILES= $(wildcard *.h)
 SOURCE_FILES= $(wildcard *.c)
 OBJECTS= $(patsubst %.c,%.o, ${SOURCE_FILES})
