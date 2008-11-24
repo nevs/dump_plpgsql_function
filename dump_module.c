@@ -20,6 +20,7 @@ Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
   DumpContext * context = new_dump_context();
   debug_query_string = query;
 
+  xml_pi( context, "xml", "version", "%.1f", 1.0, NULL );
   dump_sql_parse_tree_internal( context, query );
 
   if ( *context->output )
