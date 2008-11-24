@@ -29,6 +29,13 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
 
+FunctionDumpContext * new_function_dump_context()
+{
+  FunctionDumpContext * context = palloc0( sizeof( FunctionDumpContext ) );
+  context->dump = new_dump_context();
+}
+
+
 void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
 {
   if ( statement ) {
@@ -47,10 +54,10 @@ void child_expression( FunctionDumpContext * context, const char * tagname, PLpg
   }
 }
 
-const char * dump_plpgsql_function_internal( Oid func_oid )
+const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
 {
   FunctionDumpContext * context = palloc0( sizeof( FunctionDumpContext ) );
-  context->dump = new_dump_context();
+  context->dump = dump;
   int i;
 
   FunctionCallInfoData fake_fcinfo;

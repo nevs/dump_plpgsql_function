@@ -34,7 +34,9 @@ PG_FUNCTION_INFO_V1(dump_plpgsql_function);
 
 Datum dump_plpgsql_function( PG_FUNCTION_ARGS )
 {
-  const char * result = dump_plpgsql_function_internal( PG_GETARG_OID( 0 ) );
+  DumpContext * context = new_dump_context();
+  xml_pi( context, "xml", "version", "%.1f", 1.0, NULL );
+  const char * result = dump_plpgsql_function_internal( context, PG_GETARG_OID( 0 ) );
 
   PG_RETURN_TEXT_P( cstring_to_text( result ) );
 }
