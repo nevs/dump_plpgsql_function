@@ -13,6 +13,7 @@ int
 __attribute__ ((format (printf, 2, 3)))
 append_string( char ** buffer, char * fmt, ... );
 
+int xml_pi( DumpContext * context, const char * tagname, ... ) __attribute__((sentinel));
 int xml_tag( DumpContext * context, const char * tagname, ... ) __attribute__((sentinel));
 int xml_tag_open( DumpContext * context, const char * tagname, ... ) __attribute__((sentinel));
 int xml_tag_close( DumpContext * context, const char * tagname );
