@@ -8,8 +8,6 @@
 
 #include "plpgsql_names.h"
 
-#define ROOTNODENAME "function_tree"
-
 #define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
 #define CHILD_EXPR( type, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)node)->child )
 #define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
@@ -28,13 +26,6 @@ typedef struct function_dump_context {
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
-
-FunctionDumpContext * new_function_dump_context()
-{
-  FunctionDumpContext * context = palloc0( sizeof( FunctionDumpContext ) );
-  context->dump = new_dump_context();
-}
-
 
 void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
 {
@@ -76,7 +67,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   PLpgSQL_function * func = plpgsql_compile(&fake_fcinfo, true );
   context->func = func;
 
-  xml_tag_open( context->dump, ROOTNODENAME, NULL );
+  xml_tag_open( context->dump, "plpgsql_function_tree", NULL );
   xml_textnode( context->dump, "name", "%s", func->fn_name );
   xml_textnode( context->dump, "oid", "%d", func->fn_oid );
 
@@ -86,7 +77,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   xml_tag_close( context->dump, "datums" );
 
   child_statement( context, "action", (PLpgSQL_stmt *) func->action );
-  xml_tag_close( context->dump, ROOTNODENAME );
+  xml_tag_close( context->dump, "plpgsql_function_tree" );
   return *context->dump->output;
 }
 
