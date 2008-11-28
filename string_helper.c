@@ -236,7 +236,6 @@ static int print_xml_arginfo (const struct printf_info *info, size_t n, int *arg
 /** helper function to append formatted string at the end of an existing string */
 static int 
 append_string( char ** buffer, char * fmt, ... )
-__attribute__ ((format (printf, 2, 3)))
 {
   va_list ap;
   char * tmp;
