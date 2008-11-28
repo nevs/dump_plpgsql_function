@@ -96,6 +96,7 @@ static int print_xml_arginfo (const struct printf_info *info, size_t n, int *arg
   return 1;
 }
 
+// register printf conversion specifiers
 void string_helper_init()
 {
   register_printf_function('M', print_xml, print_xml_arginfo);
