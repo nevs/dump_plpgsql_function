@@ -8,93 +8,9 @@
 
 #include "string_helper.h"
 
-/** helper function to append c string to existing c string */
-int 
-__attribute__ ((format (printf, 2, 3)))
-append_string( char ** buffer, char * fmt, ... )
-{
-  va_list ap;
-  char * tmp;
-
-  va_start( ap, fmt );
-  int len = vasprintf(&tmp, fmt, ap);
-  va_end( ap );
-
-  if ( len == -1 ) {
-    /* error */
-    return -1;
-  } else {
-    size_t offset = 0;
-    if ( !*buffer ) {
-      *buffer = (char *) palloc( len + 1 );
-    } else {
-      offset = strlen( *buffer );
-      *buffer = (char *) repalloc( *buffer, offset + len + 1 );
-    }
-    if (!*buffer) {
-      free( tmp );
-      return -1;
-    } else {
-      memcpy( *buffer + offset, tmp, len + 1 );
-      free( tmp );
-    }
-    return len;
-  }
-}
-
-/*
- * printf format handler that does xml escaping
- *
- * FIXME: This is not safe for all encodings.
- * FIXME: integer overflow
- */
-
-static int print_xml(FILE *stream, const struct printf_info *info, const void *const *args)
-{
-  const char * xml;
-  int written = 0;
-
-  xml = *((const char **) args[0]);
-  for( ; *xml; xml++ ){
-    int len;
-    switch( *xml ) {
-      case '<':
-        len = fprintf( stream, "%s", "&lt;" );
-        break;
-      case '>':
-        len = fprintf( stream, "%s", "&gt;" );
-        break;
-      case '&':
-        len = fprintf( stream, "%s", "&amp;" );
-        break;
-      case '"':
-        if ( info->spec == 'N' ) {
-          len = fprintf( stream, "%s", "&quot;" );
-        } else {
-          len = fprintf( stream, "%c", *xml );
-        }
-        break;
-      default:
-        len = fprintf( stream, "%c", *xml );
-        break;
-    }
-    if ( len < 0 ) 
-      return len;
-    else
-      written += len;
-  }
-
-  return written;
-}
-
-static int print_xml_arginfo (const struct printf_info *info, size_t n, int *argtypes)
-{
-  /* We always take exactly one argument and this is a pointer to the structure.. */
-  if (n > 0)
-    argtypes[0] = PA_POINTER;
-
-  return 1;
-}
+static int append_string( char ** buffer, char * fmt, ... ) __attribute__ ((format (printf, 2, 3)));
+static int print_xml(FILE *stream, const struct printf_info *info, const void *const *args);
+static int print_xml_arginfo (const struct printf_info *info, size_t n, int *argtypes);
 
 // register printf conversion specifiers
 void string_helper_init()
@@ -262,5 +178,92 @@ int xml_content( DumpContext * context, const char * fmt, ... )
 
   xml_indent( context );
   return append_string( context->output, "%M\n", tmp );
+}
+
+/*
+ * printf format handler that does xml escaping
+ *
+ * FIXME: This is not safe for all encodings.
+ * FIXME: integer overflow
+ */
+static int print_xml(FILE *stream, const struct printf_info *info, const void *const *args)
+{
+  const char * xml;
+  int written = 0;
+
+  xml = *((const char **) args[0]);
+  for( ; *xml; xml++ ){
+    int len;
+    switch( *xml ) {
+      case '<':
+        len = fprintf( stream, "%s", "&lt;" );
+        break;
+      case '>':
+        len = fprintf( stream, "%s", "&gt;" );
+        break;
+      case '&':
+        len = fprintf( stream, "%s", "&amp;" );
+        break;
+      case '"':
+        if ( info->spec == 'N' ) {
+          len = fprintf( stream, "%s", "&quot;" );
+        } else {
+          len = fprintf( stream, "%c", *xml );
+        }
+        break;
+      default:
+        len = fprintf( stream, "%c", *xml );
+        break;
+    }
+    if ( len < 0 ) 
+      return len;
+    else
+      written += len;
+  }
+
+  return written;
+}
+
+static int print_xml_arginfo (const struct printf_info *info, size_t n, int *argtypes)
+{
+  /* We always take exactly one argument and this is a pointer to the structure.. */
+  if (n > 0)
+    argtypes[0] = PA_POINTER;
+
+  return 1;
+}
+
+/** helper function to append formatted string at the end of an existing string */
+static int 
+append_string( char ** buffer, char * fmt, ... )
+__attribute__ ((format (printf, 2, 3)))
+{
+  va_list ap;
+  char * tmp;
+
+  va_start( ap, fmt );
+  int len = vasprintf(&tmp, fmt, ap);
+  va_end( ap );
+
+  if ( len == -1 ) {
+    /* error */
+    return -1;
+  } else {
+    size_t offset = 0;
+    if ( !*buffer ) {
+      *buffer = (char *) palloc( len + 1 );
+    } else {
+      offset = strlen( *buffer );
+      *buffer = (char *) repalloc( *buffer, offset + len + 1 );
+    }
+    if (!*buffer) {
+      free( tmp );
+      return -1;
+    } else {
+      memcpy( *buffer + offset, tmp, len + 1 );
+      free( tmp );
+    }
+    return len;
+  }
 }
 
