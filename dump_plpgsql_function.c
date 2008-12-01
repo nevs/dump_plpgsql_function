@@ -10,7 +10,7 @@
 
 #define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
 #define CHILD_EXPR( type, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)node)->child )
-#define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
+#define VALUE_NODE( type, child ) if (((type *)node)->child) xml_tag( context->dump, #child, "value", "%s", (char *)((type *)node)->child, NULL )
 
 
 /*
@@ -68,8 +68,8 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   context->func = func;
 
   xml_tag_open( context->dump, "plpgsql_function_tree", NULL );
-  xml_textnode( context->dump, "name", "%s", func->fn_name );
-  xml_textnode( context->dump, "oid", "%d", func->fn_oid );
+  xml_tag( context->dump, "name", "value", "%s", func->fn_name, NULL );
+  xml_tag( context->dump, "oid", "value", "%d", func->fn_oid, NULL );
 
   xml_tag_open( context->dump, "datums", NULL );
   for (i = 0; i < func->ndatums; i++)
@@ -89,7 +89,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
       // FIXME add more fields
-      TEXT_NODE( PLpgSQL_var, refname );
+      VALUE_NODE( PLpgSQL_var, refname );
       CHILD_EXPR( PLpgSQL_var, default_val );
       break;
     case PLPGSQL_DTYPE_EXPR:
@@ -118,7 +118,7 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
   xml_tag_open( context->dump, tagname, NULL );
   switch( node->cmd_type ) {
     case PLPGSQL_STMT_BLOCK:           // 0
-      TEXT_NODE( PLpgSQL_stmt_block, label );
+      VALUE_NODE( PLpgSQL_stmt_block, label );
       xml_tag_open( context->dump, "body", NULL );
       foreach( item, ((PLpgSQL_stmt_block *)node)->body )
         dump_statement( context, lfirst( item ) );
