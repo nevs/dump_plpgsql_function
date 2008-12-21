@@ -108,24 +108,16 @@ int xml_textnode( DumpContext * context, const char * tagname, const char * form
   return written;
 }
 
-int xml_tag_open( DumpContext * context, const char * tagname, ... )
+int xml_tag_open( DumpContext * context, const char * tagname )
 {
   va_list ap;
   int written = 0, len;
 
   xml_indent( context );
-
-  len = append_string( context->output, "<%N", tagname );
   if ( len < 0 ) return len;
   written += len;
 
-  va_start( ap, tagname );
-  len = xml_attributes( context, ap );
-  va_end( ap );
-  if ( len < 0 ) return len;
-  written += len;
-
-  len = append_string( context->output, ">\n" );
+  len = append_string( context->output, "<%N>\n", tagname );
   if ( len < 0 ) return len;
   written += len;
 
@@ -175,6 +167,7 @@ int xml_content( DumpContext * context, const char * fmt, ... )
   va_start( ap, fmt );
   int len = vasprintf(&tmp, fmt, ap);
   va_end( ap );
+  if ( len < 0 ) return len;
 
   xml_indent( context );
   return append_string( context->output, "%M\n", tmp );

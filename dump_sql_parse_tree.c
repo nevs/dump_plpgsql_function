@@ -15,7 +15,7 @@ extern const char * debug_query_string;
 bool parse_tree_walker( Node *node, DumpContext * context );
 
 void dump_sql_parse_tree_internal( DumpContext * context, const char * query ) {
-  xml_tag_open( context, "sql_parse_tree", "query", "%s", query, NULL );
+  xml_tag_open( context, "sql_parse_tree" );
   List * parsetree_list = raw_parser( query );
   raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, context );
   xml_tag_close( context, "sql_parse_tree" );
@@ -26,7 +26,7 @@ bool conditional_child_node( Node * node, DumpContext * context, const char * ta
   bool retval = false;
 
   if ( node ) {
-    xml_tag_open( context, tagname, NULL );
+    xml_tag_open( context, tagname );
     retval = parse_tree_walker( node, (void *) context );
     xml_tag_close( context, tagname );
   }
@@ -54,7 +54,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       break;
     default:
 
-      xml_tag_open( context, tagname, NULL );
+      xml_tag_open( context, tagname );
 
       switch( nodeTag(node) ) {
         case T_Alias:          // 300
@@ -76,7 +76,8 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           CHILD_NODE( JoinExpr, alias );
           break;
         case T_A_Expr:         // 900
-          xml_tag_open( context, "operator", "type", A_Expr_Kind_Names[((A_Expr *)node)->kind], NULL );
+          xml_tag_open( context, "operator" );
+          xml_textnode( context, "operator_type", "%s", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
           CHILD_NODE( A_Expr, name );
           xml_tag_close( context, "operator" );
           CHILD_NODE( A_Expr, lexpr );
