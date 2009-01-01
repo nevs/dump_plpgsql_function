@@ -93,18 +93,18 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       CHILD_EXPR( PLpgSQL_var, default_val );
       break;
     case PLPGSQL_DTYPE_EXPR:
-      xml_tag_open( context->dump, "query" );
       if (((PLpgSQL_expr *)node)->query ) {
         xml_tag_open( context->dump, "params" );
         int i;
         for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
-          xml_tag( context->dump, "param", "index", "%d", ((PLpgSQL_expr *)node)->params[i], NULL );
+          xml_tag_open( context->dump, "Param" );
+          xml_textnode( context->dump, "index", "%d", ((PLpgSQL_expr *)node)->params[i] );
+          xml_tag_close( context->dump, "Param" );
         }
         xml_tag_close( context->dump, "params" );
       }
 
       dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
-      xml_tag_close( context->dump, "query" );
       break;
   }
   xml_tag_close( context->dump, tagname );
