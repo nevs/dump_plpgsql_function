@@ -126,6 +126,24 @@ int xml_tag_open( DumpContext * context, const char * tagname )
   return written;
 }
 
+int xml_tag_open_namespace( DumpContext * context, const char * tagname, const char * namespace )
+{
+  va_list ap;
+  int written = 0, len;
+
+  xml_indent( context );
+  if ( len < 0 ) return len;
+  written += len;
+
+  len = append_string( context->output, "<%N xmlns=\"%N\">\n", tagname, namespace );
+  if ( len < 0 ) return len;
+  written += len;
+
+  context->indent++;
+
+  return written;
+}
+
 int xml_attributes( DumpContext * context, va_list ap )
 {
   int written = 0, len;
