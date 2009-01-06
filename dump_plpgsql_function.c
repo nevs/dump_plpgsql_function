@@ -11,6 +11,7 @@
 #define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
 #define CHILD_EXPR( type, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)node)->child )
 #define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
+#define BOOL_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
 
 
 /*
@@ -88,11 +89,20 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   xml_tag_open( context->dump, tagname );
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
-      // FIXME add more fields
+      // FIXME incomplete
       TEXT_NODE( PLpgSQL_var, refname );
+      BOOL_NODE( PLpgSQL_var, isconst );
+      BOOL_NODE( PLpgSQL_var, notnull );
       CHILD_EXPR( PLpgSQL_var, default_val );
+      CHILD_EXPR( PLpgSQL_var, cursor_explicit_expr );
+      BOOL_NODE( PLpgSQL_var, cursor_explicit_argrow );
+      BOOL_NODE( PLpgSQL_var, cursor_options );
+      BOOL_NODE( PLpgSQL_var, value );
+      BOOL_NODE( PLpgSQL_var, isnull );
+      BOOL_NODE( PLpgSQL_var, freeval );
       break;
     case PLPGSQL_DTYPE_EXPR:
+      // FIXME incomplete
       if (((PLpgSQL_expr *)node)->query ) {
         xml_tag_open( context->dump, "params" );
         int i;
