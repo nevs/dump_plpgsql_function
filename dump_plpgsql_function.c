@@ -67,7 +67,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   PLpgSQL_function * func = plpgsql_compile(&fake_fcinfo, true );
   context->func = func;
 
-  xml_tag_open( context->dump, "plpgsql_function_tree" );
+  xml_tag_open( context->dump, "plpgsql_function" );
   xml_textnode( context->dump, "name", "%s", func->fn_name );
   xml_textnode( context->dump, "oid", "%d", func->fn_oid );
 
@@ -77,7 +77,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   xml_tag_close( context->dump, "datums" );
 
   child_statement( context, "action", (PLpgSQL_stmt *) func->action );
-  xml_tag_close( context->dump, "plpgsql_function_tree" );
+  xml_tag_close( context->dump, "plpgsql_function" );
   return *context->dump->output;
 }
 
@@ -134,6 +134,7 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
       break;
     case PLPGSQL_STMT_DYNEXECUTE:      // 15
+      // FIXME incomplete 
       if (((PLpgSQL_stmt_dynexecute *)node)->params) {
         xml_tag_open( context->dump, "params" );
         foreach( item, ((PLpgSQL_stmt_dynexecute *)node)->params)
@@ -152,5 +153,8 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
 
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum )
 {
+  xml_tag_open( context->dump, "Exception" );
+  // FIXME incomplete 
+  xml_tag_close( context->dump, "Exception" );
 }
 

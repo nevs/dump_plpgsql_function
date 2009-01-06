@@ -15,7 +15,7 @@ extern const char * debug_query_string;
 bool parse_tree_walker( Node *node, DumpContext * context );
 
 void dump_sql_parse_tree_internal( DumpContext * context, const char * query ) {
-  xml_tag_open( context, "sql_parse_tree" );
+  xml_tag_open_namespace( context, "sql_parse_tree", "SQL" );
   List * parsetree_list = raw_parser( query );
   raw_expression_tree_walker( (Node *) parsetree_list, parse_tree_walker, context );
   xml_tag_close( context, "sql_parse_tree" );
@@ -127,7 +127,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
           }
           break;
         default: 
-          xml_textnode( context, "id", "%d", nodeTag(node), NULL );
+//          xml_textnode( context, "id", "%d", nodeTag(node), NULL );
           retval = raw_expression_tree_walker(node, parse_tree_walker, (void *) context );
           break;
       }
