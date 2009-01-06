@@ -11,7 +11,8 @@
 #define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
 #define CHILD_EXPR( type, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)node)->child )
 #define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
-#define BOOL_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
+#define BOOL_NODE( type, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
+#define NUMBER_NODE( type, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
 
 
 /*
@@ -82,6 +83,11 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   return *context->dump->output;
 }
 
+static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type )
+{
+  // FIXME incomplete
+}
+
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
 {
   const char *tagname = PLPGSQL_DTYPE_Names[node->dtype] ? : "DATUM";
@@ -89,21 +95,42 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   xml_tag_open( context->dump, tagname );
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
-      // FIXME incomplete
       TEXT_NODE( PLpgSQL_var, refname );
+      xml_tag_open( context->dump, "datatype" );
+      dump_type( context, ((PLpgSQL_var*)node)->datatype );
+      xml_tag_close( context->dump, "datatype" );
       BOOL_NODE( PLpgSQL_var, isconst );
       BOOL_NODE( PLpgSQL_var, notnull );
       CHILD_EXPR( PLpgSQL_var, default_val );
-      CHILD_EXPR( PLpgSQL_var, cursor_explicit_expr );
-      BOOL_NODE( PLpgSQL_var, cursor_explicit_argrow );
-      BOOL_NODE( PLpgSQL_var, cursor_options );
-      BOOL_NODE( PLpgSQL_var, value );
+      if ( ((PLpgSQL_var*)node)->cursor_explicit_expr ) {
+        CHILD_EXPR( PLpgSQL_var, cursor_explicit_expr );
+        BOOL_NODE( PLpgSQL_var, cursor_explicit_argrow );
+        BOOL_NODE( PLpgSQL_var, cursor_options );
+      }
+      NUMBER_NODE( PLpgSQL_var, value );
       BOOL_NODE( PLpgSQL_var, isnull );
       BOOL_NODE( PLpgSQL_var, freeval );
+      break;
+    case PLPGSQL_DTYPE_ROW:
+      // FIXME incomplete
+      TEXT_NODE( PLpgSQL_row, refname );
+      break;
+    case PLPGSQL_DTYPE_REC:
+      // FIXME incomplete
+      TEXT_NODE( PLpgSQL_rec, refname );
+      break;
+    case PLPGSQL_DTYPE_RECFIELD:
+      // FIXME incomplete
+      TEXT_NODE( PLpgSQL_recfield, fieldname );
+      break;
+    case PLPGSQL_DTYPE_ARRAYELEM:
+      CHILD_EXPR( PLpgSQL_arrayelem, subscript );
+      NUMBER_NODE( PLpgSQL_arrayelem, arrayparentno );
       break;
     case PLPGSQL_DTYPE_EXPR:
       // FIXME incomplete
       if (((PLpgSQL_expr *)node)->query ) {
+        TEXT_NODE( PLpgSQL_expr, query );
         xml_tag_open( context->dump, "params" );
         int i;
         for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
@@ -115,6 +142,9 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       }
 
       dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
+      break;
+    case PLPGSQL_DTYPE_TRIGARG:
+      CHILD_EXPR( PLpgSQL_trigarg, argnum );
       break;
   }
   xml_tag_close( context->dump, tagname );
