@@ -28,6 +28,7 @@ typedef struct function_dump_context {
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
+static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type );
 
 void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
 {
