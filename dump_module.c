@@ -18,7 +18,7 @@ Datum dump_sql_parse_tree( PG_FUNCTION_ARGS )
 {
   char * query = text_to_cstring( PG_GETARG_TEXT_P( 0 ) );
   DumpContext * context = new_dump_context();
-  debug_query_string = query;
+//  debug_query_string = query;
 
   xml_pi( context, "xml", "version", "%.1f", 1.0, NULL );
   dump_sql_parse_tree_internal( context, query );
