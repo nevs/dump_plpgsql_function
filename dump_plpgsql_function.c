@@ -171,6 +171,9 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
         xml_tag_close( context->dump, "exceptions" );
       }
       break;
+    case PLPGSQL_STMT_ASSIGN:          // 1
+      CHILD_EXPR( PLpgSQL_stmt_assign, expr );
+      break;
     case PLPGSQL_STMT_RETURN:          // 10
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
       break;
