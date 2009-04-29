@@ -1,7 +1,7 @@
 
 #include "plpgsql.h"
 
-const char * PLPGSQL_DTYPE_Names[10] = {
+const char * PLPGSQL_DTYPE_Names[] = {
   [PLPGSQL_DTYPE_VAR] = "VAR",
   [PLPGSQL_DTYPE_ROW] = "ROW",
   [PLPGSQL_DTYPE_REC] = "REC",
@@ -11,7 +11,7 @@ const char * PLPGSQL_DTYPE_Names[10] = {
   [PLPGSQL_DTYPE_TRIGARG] = "TRIGARG",
 };
 
-const char * PLPGSQL_STMT_Names[25] = {
+const char * PLPGSQL_STMT_Names[] = {
   [PLPGSQL_STMT_BLOCK] = "BLOCK",
   [PLPGSQL_STMT_ASSIGN] = "ASSIGN",
   [PLPGSQL_STMT_IF] = "IF",
