@@ -74,6 +74,11 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   xml_textnode( context->dump, "name", "%s", func->fn_name );
   xml_textnode( context->dump, "oid", "%d", func->fn_oid );
 
+  xml_tag_open( context->dump, "arguments" );
+    for (i = 0; i < func->fn_nargs; i++)
+      xml_tag( context->dump, "argument", "position", "%d", i, "datum", "%d", func->fn_argvarnos[i], "oid", "%d", func->fn_hashkey->argtypes[i], NULL );
+  xml_tag_close( context->dump, "arguments" );
+
   xml_tag_open( context->dump, "datums" );
   for (i = 0; i < func->ndatums; i++)
     dump_datum( context, func->datums[i] );
