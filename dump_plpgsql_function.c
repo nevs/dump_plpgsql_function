@@ -1,6 +1,7 @@
 
 #include <postgres.h>
 #include <plpgsql.h>
+#include <utils/builtins.h>
 
 #include "dump_plpgsql_function.h"
 #include "dump_sql_parse_tree.h"
@@ -75,8 +76,10 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   xml_textnode( context->dump, "oid", "%d", func->fn_oid );
 
   xml_tag_open( context->dump, "arguments" );
-    for (i = 0; i < func->fn_nargs; i++)
-      xml_tag( context->dump, "argument", "position", "%d", i, "datum", "%d", func->fn_argvarnos[i], "oid", "%d", func->fn_hashkey->argtypes[i], NULL );
+    for (i = 0; i < func->fn_nargs; i++) {
+      Datum type = DirectFunctionCall1( regtypeout, func->fn_hashkey->argtypes[i] );
+      xml_tag( context->dump, "argument", "position", "%d", i, "datum", "%d", func->fn_argvarnos[i], "oid", "%d", func->fn_hashkey->argtypes[i], "type", "%s", DatumGetTextP( type ), NULL );
+    }
   xml_tag_close( context->dump, "arguments" );
 
   xml_tag_open( context->dump, "datums" );
