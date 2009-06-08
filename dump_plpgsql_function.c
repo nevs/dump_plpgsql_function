@@ -94,7 +94,10 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
 
 static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type )
 {
-  // FIXME incomplete
+  xml_tag_open( context->dump, "datatype" );
+  xml_textnode( context->dump, "name", "%s", type->typname );
+  xml_textnode( context->dump, "oid", "%d", type->typoid );
+  xml_tag_close( context->dump, "datatype" );
 }
 
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
@@ -105,9 +108,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
       TEXT_NODE( PLpgSQL_var, refname );
-      xml_tag_open( context->dump, "datatype" );
       dump_type( context, ((PLpgSQL_var*)node)->datatype );
-      xml_tag_close( context->dump, "datatype" );
       BOOL_NODE( PLpgSQL_var, isconst );
       BOOL_NODE( PLpgSQL_var, notnull );
       CHILD_EXPR( PLpgSQL_var, default_val );
