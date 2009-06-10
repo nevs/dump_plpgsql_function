@@ -49,6 +49,12 @@ void child_expression( FunctionDumpContext * context, const char * tagname, PLpg
   }
 }
 
+static const char * oid_datatype_name( Oid oid )
+{
+  Datum type = DirectFunctionCall1( regtypeout, oid );
+  return DatumGetTextP( type )->vl_dat;
+}
+
 const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
 {
   FunctionDumpContext * context = palloc0( sizeof( FunctionDumpContext ) );
@@ -77,8 +83,12 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
 
   xml_tag_open( context->dump, "arguments" );
     for (i = 0; i < func->fn_nargs; i++) {
-      Datum type = DirectFunctionCall1( regtypeout, func->fn_hashkey->argtypes[i] );
-      xml_tag( context->dump, "argument", "position", "%d", i, "datum", "%d", func->fn_argvarnos[i], "oid", "%d", func->fn_hashkey->argtypes[i], "type", "%s", DatumGetTextP( type ), NULL );
+      xml_tag( context->dump, "argument",
+               "position", "%d", i,
+               "datum", "%d", func->fn_argvarnos[i],
+               "oid", "%d", func->fn_hashkey->argtypes[i],
+               "datatype", "%s", oid_datatype_name( func->fn_hashkey->argtypes[i] ),
+               NULL );
     }
   xml_tag_close( context->dump, "arguments" );
 
@@ -122,8 +132,18 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       BOOL_NODE( PLpgSQL_var, freeval );
       break;
     case PLPGSQL_DTYPE_ROW:
-      // FIXME incomplete
       TEXT_NODE( PLpgSQL_row, refname );
+      xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_row *)node)->rowtupdesc->tdtypeid );
+      xml_tag_open( context->dump, "fields" );
+      int i;
+      for( i=0; i < ((PLpgSQL_row *)node)->nfields; i++ ) {
+        xml_tag_open( context->dump, "field" );
+        xml_textnode( context->dump, "fieldname", "%s", ((PLpgSQL_row *)node)->fieldnames[i] );
+        xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_row *)node)->rowtupdesc->attrs[i]->atttypid );
+        xml_textnode( context->dump, "datatype", "%s", oid_datatype_name(((PLpgSQL_row *)node)->rowtupdesc->attrs[i]->atttypid) );
+        xml_tag_close( context->dump, "field" );
+      }
+      xml_tag_close( context->dump, "fields" );
       break;
     case PLPGSQL_DTYPE_REC:
       // FIXME incomplete
