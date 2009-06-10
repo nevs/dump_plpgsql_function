@@ -113,6 +113,7 @@ static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type )
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
 {
   const char *tagname = PLPGSQL_DTYPE_Names[node->dtype] ? : "DATUM";
+  int i;
 
   xml_tag_open( context->dump, tagname );
   switch( node->dtype ) {
@@ -135,7 +136,6 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       TEXT_NODE( PLpgSQL_row, refname );
       xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_row *)node)->rowtupdesc->tdtypeid );
       xml_tag_open( context->dump, "fields" );
-      int i;
       for( i=0; i < ((PLpgSQL_row *)node)->nfields; i++ ) {
         xml_tag_open( context->dump, "field" );
         xml_textnode( context->dump, "fieldname", "%s", ((PLpgSQL_row *)node)->fieldnames[i] );
@@ -148,6 +148,16 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
     case PLPGSQL_DTYPE_REC:
       // FIXME incomplete
       TEXT_NODE( PLpgSQL_rec, refname );
+      xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_rec *)node)->tupdesc->tdtypeid );
+      xml_tag_open( context->dump, "fields" );
+      for( i=0; i < ((PLpgSQL_rec *)node)->tupdesc->natts; i++ ) {
+        xml_tag_open( context->dump, "field" );
+        xml_textnode( context->dump, "fieldname", "%s", ((PLpgSQL_rec *)node)->tupdesc->attrs[i]->attname );
+        xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_rec *)node)->tupdesc->attrs[i]->atttypid );
+        xml_textnode( context->dump, "datatype", "%s", oid_datatype_name(((PLpgSQL_rec *)node)->tupdesc->attrs[i]->atttypid) );
+        xml_tag_close( context->dump, "field" );
+      }
+      xml_tag_close( context->dump, "fields" );
       break;
     case PLPGSQL_DTYPE_RECFIELD:
       // FIXME incomplete
@@ -162,7 +172,6 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       if (((PLpgSQL_expr *)node)->query ) {
         TEXT_NODE( PLpgSQL_expr, query );
         xml_tag_open( context->dump, "params" );
-        int i;
         for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
           xml_tag_open( context->dump, "Param" );
           xml_textnode( context->dump, "index", "%d", ((PLpgSQL_expr *)node)->params[i] );
@@ -217,6 +226,7 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       CHILD_EXPR( PLpgSQL_stmt_dynexecute, query );
       break;
     default:
+      // FIXME
       xml_tag( context->dump, "node", "cmd_type", "%d", node->cmd_type, NULL );
       break;
 
