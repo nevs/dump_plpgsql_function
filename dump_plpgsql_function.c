@@ -29,7 +29,7 @@ typedef struct function_dump_context {
 static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
-static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type );
+static void dump_datatype( FunctionDumpContext * context, Oid typoid );
 
 void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
 {
@@ -82,12 +82,10 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
 
   xml_tag_open( context->dump, "arguments" );
     for (i = 0; i < func->fn_nargs; i++) {
-      xml_tag( context->dump, "argument",
-               "position", "%d", i,
-               "datum", "%d", func->fn_argvarnos[i],
-               "oid", "%d", func->fn_hashkey->argtypes[i],
-               "datatype", "%s", oid_datatype_name( func->fn_hashkey->argtypes[i] ),
-               NULL );
+      xml_tag_open( context->dump, "argument" );
+      xml_textnode( context->dump, "position", "%d", func->fn_argvarnos );
+      dump_datatype( context, func->fn_hashkey->argtypes[i] );
+      xml_tag_close( context->dump, "argument" );
     }
   xml_tag_close( context->dump, "arguments" );
 
@@ -101,11 +99,11 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   return *context->dump->output;
 }
 
-static void dump_type( FunctionDumpContext * context, PLpgSQL_type * type )
+static void dump_datatype( FunctionDumpContext * context, Oid typoid )
 {
   xml_tag_open( context->dump, "datatype" );
-  xml_textnode( context->dump, "name", "%s", type->typname );
-  xml_textnode( context->dump, "oid", "%d", type->typoid );
+  xml_textnode( context->dump, "name", "%s", oid_datatype_name( typoid ));
+  xml_textnode( context->dump, "oid", "%d", typoid );
   xml_tag_close( context->dump, "datatype" );
 }
 
@@ -118,7 +116,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
       TEXT_NODE( PLpgSQL_var, refname );
-      dump_type( context, ((PLpgSQL_var*)node)->datatype );
+      dump_datatype( context, ((PLpgSQL_var*)node)->datatype->typoid );
       BOOL_NODE( PLpgSQL_var, isconst );
       BOOL_NODE( PLpgSQL_var, notnull );
       CHILD_EXPR( PLpgSQL_var, default_val );
