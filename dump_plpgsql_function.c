@@ -51,8 +51,7 @@ void child_expression( FunctionDumpContext * context, const char * tagname, PLpg
 
 static const char * oid_datatype_name( Oid oid )
 {
-  Datum type = DirectFunctionCall1( regtypeout, oid );
-  return DatumGetTextP( type )->vl_dat;
+  return DatumGetCString( DirectFunctionCall1( regtypeout, oid ) );
 }
 
 const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
@@ -146,7 +145,6 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       xml_tag_close( context->dump, "fields" );
       break;
     case PLPGSQL_DTYPE_REC:
-      // FIXME incomplete
       TEXT_NODE( PLpgSQL_rec, refname );
       xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_rec *)node)->tupdesc->tdtypeid );
       xml_tag_open( context->dump, "fields" );
@@ -175,10 +173,20 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
         for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
           xml_tag_open( context->dump, "Param" );
           xml_textnode( context->dump, "index", "%d", ((PLpgSQL_expr *)node)->params[i] );
+          if (((PLpgSQL_expr *)node)->plan) {
+            
+          }
+//          xml_textnode( context->dump, "datatype_oid", "%d", ((PLpgSQL_expr *)node)->plan_argtypes[i] );
+//          xml_textnode( context->dump, "datatype", "%s", oid_datatype_name(((PLpgSQL_expr *)node)->plan_argtypes[i]) );
           xml_tag_close( context->dump, "Param" );
         }
         xml_tag_close( context->dump, "params" );
       }
+      if ( ((PLpgSQL_expr *)node)->expr_simple_expr ) {
+        xml_textnode( context->dump, "result_type_oid", "%d", ((PLpgSQL_expr *)node)->expr_simple_type );
+        xml_textnode( context->dump, "result_type", "%d", oid_datatype_name(((PLpgSQL_expr *)node)->expr_simple_type) );
+      }
+      
 
       dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
       break;
@@ -214,6 +222,10 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       break;
     case PLPGSQL_STMT_RETURN:          // 10
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
+      break;
+    case PLPGSQL_STMT_EXECSQL:         // 14
+      child_expression( context, "sqlstmt", ((PLpgSQL_stmt_execsql *)node)->sqlstmt);
+      
       break;
     case PLPGSQL_STMT_DYNEXECUTE:      // 15
       // FIXME incomplete 
