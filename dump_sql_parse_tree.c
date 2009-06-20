@@ -102,6 +102,10 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       CHILD_NODE( ResTarget, indirection );
       CHILD_NODE( ResTarget, val );
       break;
+    case T_TypeCast:       // 910
+      CHILD_NODE( TypeCast, arg );
+      CHILD_NODE( TypeCast, typename );
+      break;
     case T_SelectStmt:     // 705
       CHILD_NODE( SelectStmt, distinctClause );
       CHILD_NODE( SelectStmt, intoClause );

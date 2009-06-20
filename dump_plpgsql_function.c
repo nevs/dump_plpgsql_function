@@ -83,6 +83,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
   xml_tag_open( context->dump, "arguments" );
     for (i = 0; i < func->fn_nargs; i++) {
       xml_tag_open( context->dump, "argument" );
+
       xml_textnode( context->dump, "position", "%d", func->fn_argvarnos );
       dump_datatype( context, func->fn_hashkey->argtypes[i] );
       xml_tag_close( context->dump, "argument" );
@@ -180,9 +181,10 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
         }
         xml_tag_close( context->dump, "params" );
       }
-      if ( ((PLpgSQL_expr *)node)->expr_simple_expr ) {
-        xml_textnode( context->dump, "result_type_oid", "%d", ((PLpgSQL_expr *)node)->expr_simple_type );
-        xml_textnode( context->dump, "result_type", "%d", oid_datatype_name(((PLpgSQL_expr *)node)->expr_simple_type) );
+      if ( ((PLpgSQL_expr *)node)->expr_simple_type ) {
+        xml_tag_open( context->dump, "result_type" );
+        dump_datatype( context, ((PLpgSQL_expr *)node)->expr_simple_type );
+        xml_tag_close( context->dump, "result_type" );
       }
       
 
