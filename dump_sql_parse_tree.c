@@ -110,6 +110,12 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       CHILD_NODE( TypeName, names );
       xml_textnode( context, "typeid", "%u", ((TypeName*)node)->typeid );
       break;
+    case T_InsertStmt:     // 702
+      CHILD_NODE( InsertStmt, relation );
+      CHILD_NODE( InsertStmt, cols );
+      CHILD_NODE( InsertStmt, selectStmt );
+      CHILD_NODE( InsertStmt, returningList );
+      break;
     case T_SelectStmt:     // 705
       CHILD_NODE( SelectStmt, distinctClause );
       CHILD_NODE( SelectStmt, intoClause );
