@@ -67,7 +67,7 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       CHILD_NODE( JoinExpr, alias );
       break;
     case T_Integer:            // 651
-      xml_textnode( context, "value", "%d", intVal( node ), NULL );
+      xml_textnode( context, "value", "%ld", intVal( node ), NULL );
       break;
     case T_String:             // 653
       xml_textnode( context, "value", "%s", strVal( node ), NULL );
@@ -105,6 +105,10 @@ bool parse_tree_walker( Node *node, DumpContext * context )
     case T_TypeCast:       // 910
       CHILD_NODE( TypeCast, arg );
       CHILD_NODE( TypeCast, typename );
+      break;
+    case T_TypeName:       // 915
+      CHILD_NODE( TypeName, names );
+      xml_textnode( context, "typeid", "%u", ((TypeName*)node)->typeid );
       break;
     case T_SelectStmt:     // 705
       CHILD_NODE( SelectStmt, distinctClause );

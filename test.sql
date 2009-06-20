@@ -1,7 +1,7 @@
 
 CREATE OR REPLACE FUNCTION vuln_sql_injection_direct( stmt text ) RETURNS VOID AS $$
   BEGIN
-    SELECT "foo"::text;
+    SELECT 'foo'::text;
     EXECUTE stmt;
     RETURN;
   END;
