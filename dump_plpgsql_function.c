@@ -219,6 +219,7 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       break;
     case PLPGSQL_STMT_ASSIGN:          // 1
       CHILD_EXPR( PLpgSQL_stmt_assign, expr );
+      xml_textnode( context->dump, "varno", "%d", ((PLpgSQL_stmt_assign *)node)->varno );
       break;
     case PLPGSQL_STMT_RETURN:          // 10
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
