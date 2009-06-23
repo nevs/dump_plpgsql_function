@@ -72,6 +72,40 @@ bool parse_tree_walker( Node *node, DumpContext * context )
     case T_String:             // 653
       xml_textnode( context, "value", "%s", strVal( node ), NULL );
       break;
+    case T_InsertStmt:     // 702
+      CHILD_NODE( InsertStmt, relation );
+      CHILD_NODE( InsertStmt, cols );
+      CHILD_NODE( InsertStmt, selectStmt );
+      CHILD_NODE( InsertStmt, returningList );
+      break;
+    case T_UpdateStmt:     // 703
+      CHILD_NODE( UpdateStmt, relation );
+      CHILD_NODE( UpdateStmt, targetList );
+      CHILD_NODE( UpdateStmt, whereClause );
+      CHILD_NODE( UpdateStmt, fromClause );
+      CHILD_NODE( UpdateStmt, returningList );
+      break;
+    case T_SelectStmt:     // 705
+      CHILD_NODE( SelectStmt, distinctClause );
+      CHILD_NODE( SelectStmt, intoClause );
+      CHILD_NODE( SelectStmt, targetList );
+      CHILD_NODE( SelectStmt, fromClause );
+      CHILD_NODE( SelectStmt, whereClause );
+      CHILD_NODE( SelectStmt, groupClause );
+      CHILD_NODE( SelectStmt, havingClause );
+      CHILD_NODE( SelectStmt, withClause );
+      CHILD_NODE( SelectStmt, valuesLists );
+      CHILD_NODE( SelectStmt, sortClause );
+      CHILD_NODE( SelectStmt, limitOffset );
+      CHILD_NODE( SelectStmt, limitCount );
+      CHILD_NODE( SelectStmt, lockingClause );
+
+      if ( ((SelectStmt *)node)->op != SETOP_NONE ) {
+        xml_tag( context, "op", "value", "%s", SetOperationNames[((SelectStmt*)node)->op], NULL );
+        CHILD_NODE( SelectStmt, larg );
+        CHILD_NODE( SelectStmt, rarg );
+      }
+      break;
     case T_A_Expr:         // 900
       xml_tag_open( context, "operator" );
       xml_textnode( context, "operator_type", "%s", A_Expr_Kind_Names[((A_Expr *)node)->kind] );
@@ -109,33 +143,6 @@ bool parse_tree_walker( Node *node, DumpContext * context )
     case T_TypeName:       // 915
       CHILD_NODE( TypeName, names );
       xml_textnode( context, "typeid", "%u", ((TypeName*)node)->typeid );
-      break;
-    case T_InsertStmt:     // 702
-      CHILD_NODE( InsertStmt, relation );
-      CHILD_NODE( InsertStmt, cols );
-      CHILD_NODE( InsertStmt, selectStmt );
-      CHILD_NODE( InsertStmt, returningList );
-      break;
-    case T_SelectStmt:     // 705
-      CHILD_NODE( SelectStmt, distinctClause );
-      CHILD_NODE( SelectStmt, intoClause );
-      CHILD_NODE( SelectStmt, targetList );
-      CHILD_NODE( SelectStmt, fromClause );
-      CHILD_NODE( SelectStmt, whereClause );
-      CHILD_NODE( SelectStmt, groupClause );
-      CHILD_NODE( SelectStmt, havingClause );
-      CHILD_NODE( SelectStmt, withClause );
-      CHILD_NODE( SelectStmt, valuesLists );
-      CHILD_NODE( SelectStmt, sortClause );
-      CHILD_NODE( SelectStmt, limitOffset );
-      CHILD_NODE( SelectStmt, limitCount );
-      CHILD_NODE( SelectStmt, lockingClause );
-
-      if ( ((SelectStmt *)node)->op != SETOP_NONE ) {
-        xml_tag( context, "op", "value", "%s", SetOperationNames[((SelectStmt*)node)->op], NULL );
-        CHILD_NODE( SelectStmt, larg );
-        CHILD_NODE( SelectStmt, rarg );
-      }
       break;
     default: 
       xml_tag( context, "unhandled_node", "id", "%d", nodeTag(node), "name", "%s", tagname, NULL );
