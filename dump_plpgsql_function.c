@@ -221,6 +221,18 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       CHILD_EXPR( PLpgSQL_stmt_assign, expr );
       xml_textnode( context->dump, "varno", "%d", ((PLpgSQL_stmt_assign *)node)->varno );
       break;
+    case PLPGSQL_STMT_IF:              // 2
+      CHILD_EXPR( PLpgSQL_stmt_if, cond );
+        xml_tag_open( context->dump, "true" );
+        foreach( item, ((PLpgSQL_stmt_if *)node)->true_body )
+          dump_statement( context, lfirst( item ) );
+        xml_tag_close( context->dump, "true" );
+
+        xml_tag_open( context->dump, "false" );
+        foreach( item, ((PLpgSQL_stmt_if *)node)->true_body )
+          dump_statement( context, lfirst( item ) );
+        xml_tag_close( context->dump, "false" );
+      break;
     case PLPGSQL_STMT_RETURN:          // 10
       CHILD_EXPR( PLpgSQL_stmt_return, expr );
       break;
