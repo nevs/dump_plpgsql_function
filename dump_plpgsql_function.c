@@ -9,7 +9,29 @@
 
 #include "plpgsql_names.h"
 
-#define CHILD_STMT( type, child ) child_statement( context, #child, (PLpgSQL_stmt *)((type *)node)->child )
+#define CHILD_DATUM( type, node, child ) \
+  if (((type *)node)->child) { \
+    xml_tag_open( context->dump, #child ); \
+    dump_datum( context, (PLpgSQL_datum *)((type *)node)->child ); \
+    xml_tag_close( context->dump, #child ); \
+  }
+
+#define CHILD_DATUM_LIST( type, node, child ) \
+  if (((type *)node)->child) { \
+    ListCell * item_macro; \
+    xml_tag_open( context->dump, #child ); \
+    foreach( item_macro, ((type *)(node))->child ) \
+      dump_datum( context, (PLpgSQL_datum *) lfirst(item_macro)); \
+    xml_tag_close( context->dump, #child ); \
+  }
+
+#define CHILD_STMT( type, node, child ) \
+  if (((type *)node)->child) { \
+    xml_tag_open( context->dump, #child ); \
+    dump_statement( context, (PLpgSQL_stmt *)((type *)node)->child ); \
+    xml_tag_close( context->dump, #child ); \
+  }
+
 #define CHILD_STMT_LIST( type, node, child ) \
   xml_tag_open( context->dump, #child ); \
   { \
@@ -19,10 +41,9 @@
   } \
   xml_tag_close( context->dump, #child );
 
-#define CHILD_EXPR( type, node, child ) child_expression( context, #child, (PLpgSQL_expr *)((type *)(node))->child )
-#define TEXT_NODE( type, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
-#define BOOL_NODE( type, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
-#define NUMBER_NODE( type, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
+#define TEXT_NODE( type, node, child ) if (((type *)node)->child) xml_textnode( context->dump, #child, "%s", (char *)((type *)node)->child )
+#define BOOL_NODE( type, node, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
+#define NUMBER_NODE( type, node, child )  xml_textnode( context->dump, #child, "%d", ((type *)node)->child )
 
 
 /*
@@ -39,24 +60,6 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *stmt );
 static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * datum );
 static void dump_exception( FunctionDumpContext * context, PLpgSQL_exception * datum );
 static void dump_datatype( FunctionDumpContext * context, Oid typoid );
-
-void child_statement( FunctionDumpContext * context, const char * tagname, PLpgSQL_stmt * statement )
-{
-  if ( statement ) {
-    xml_tag_open( context->dump, tagname );
-    dump_statement( context, statement );
-    xml_tag_close( context->dump, tagname );
-  }
-}
-
-void child_expression( FunctionDumpContext * context, const char * tagname, PLpgSQL_expr * expression )
-{
-  if ( expression ) {
-    xml_tag_open( context->dump, tagname );
-    dump_datum( context, (PLpgSQL_datum *) expression );
-    xml_tag_close( context->dump, tagname );
-  }
-}
 
 static const char * oid_datatype_name( Oid oid )
 {
@@ -104,7 +107,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
     dump_datum( context, func->datums[i] );
   xml_tag_close( context->dump, "datums" );
 
-  child_statement( context, "action", (PLpgSQL_stmt *) func->action );
+  CHILD_STMT( PLpgSQL_function, func, action );
   xml_tag_close( context->dump, "plpgsql_function" );
   return *context->dump->output;
 }
@@ -123,24 +126,25 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
   int i;
 
   xml_tag_open( context->dump, tagname );
+  NUMBER_NODE( PLpgSQL_datum, node, dno );
   switch( node->dtype ) {
     case PLPGSQL_DTYPE_VAR:
-      TEXT_NODE( PLpgSQL_var, refname );
+      TEXT_NODE( PLpgSQL_var, node, refname );
       dump_datatype( context, ((PLpgSQL_var*)node)->datatype->typoid );
-      BOOL_NODE( PLpgSQL_var, isconst );
-      BOOL_NODE( PLpgSQL_var, notnull );
-      CHILD_EXPR( PLpgSQL_var, node, default_val );
+      BOOL_NODE( PLpgSQL_var, node, isconst );
+      BOOL_NODE( PLpgSQL_var, node, notnull );
+      CHILD_DATUM( PLpgSQL_var, node, default_val );
       if ( ((PLpgSQL_var*)node)->cursor_explicit_expr ) {
-        CHILD_EXPR( PLpgSQL_var, node, cursor_explicit_expr );
-        BOOL_NODE( PLpgSQL_var, cursor_explicit_argrow );
-        BOOL_NODE( PLpgSQL_var, cursor_options );
+        CHILD_DATUM( PLpgSQL_var, node, cursor_explicit_expr );
+        BOOL_NODE( PLpgSQL_var, node, cursor_explicit_argrow );
+        BOOL_NODE( PLpgSQL_var, node, cursor_options );
       }
-      NUMBER_NODE( PLpgSQL_var, value );
-      BOOL_NODE( PLpgSQL_var, isnull );
-      BOOL_NODE( PLpgSQL_var, freeval );
+      NUMBER_NODE( PLpgSQL_var, node, value );
+      BOOL_NODE( PLpgSQL_var, node, isnull );
+      BOOL_NODE( PLpgSQL_var, node, freeval );
       break;
     case PLPGSQL_DTYPE_ROW:
-      TEXT_NODE( PLpgSQL_row, refname );
+      TEXT_NODE( PLpgSQL_row, node, refname );
       xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_row *)node)->rowtupdesc->tdtypeid );
       xml_tag_open( context->dump, "fields" );
       for( i=0; i < ((PLpgSQL_row *)node)->nfields; i++ ) {
@@ -153,7 +157,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       xml_tag_close( context->dump, "fields" );
       break;
     case PLPGSQL_DTYPE_REC:
-      TEXT_NODE( PLpgSQL_rec, refname );
+      TEXT_NODE( PLpgSQL_rec, node, refname );
       xml_textnode( context->dump, "oid", "%d", ((PLpgSQL_rec *)node)->tupdesc->tdtypeid );
       xml_tag_open( context->dump, "fields" );
       for( i=0; i < ((PLpgSQL_rec *)node)->tupdesc->natts; i++ ) {
@@ -167,16 +171,16 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       break;
     case PLPGSQL_DTYPE_RECFIELD:
       // FIXME incomplete
-      TEXT_NODE( PLpgSQL_recfield, fieldname );
+      TEXT_NODE( PLpgSQL_recfield, node, fieldname );
       break;
     case PLPGSQL_DTYPE_ARRAYELEM:
-      CHILD_EXPR( PLpgSQL_arrayelem, node, subscript );
-      NUMBER_NODE( PLpgSQL_arrayelem, arrayparentno );
+      CHILD_DATUM( PLpgSQL_arrayelem, node, subscript );
+      NUMBER_NODE( PLpgSQL_arrayelem, node, arrayparentno );
       break;
     case PLPGSQL_DTYPE_EXPR:
       // FIXME incomplete
       if (((PLpgSQL_expr *)node)->query ) {
-        TEXT_NODE( PLpgSQL_expr, query );
+        TEXT_NODE( PLpgSQL_expr, node, query );
         xml_tag_open( context->dump, "params" );
         for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
           xml_tag_open( context->dump, "Param" );
@@ -200,7 +204,7 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
       dump_sql_parse_tree_internal( context->dump, ((PLpgSQL_expr *)node)->query );
       break;
     case PLPGSQL_DTYPE_TRIGARG:
-      CHILD_EXPR( PLpgSQL_trigarg, node, argnum );
+      CHILD_DATUM( PLpgSQL_trigarg, node, argnum );
       break;
   }
   xml_tag_close( context->dump, tagname );
@@ -212,11 +216,14 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
   ListCell *item;
 
   xml_tag_open( context->dump, tagname );
+  NUMBER_NODE( PLpgSQL_stmt, node, lineno );
   switch( node->cmd_type ) {
     case PLPGSQL_STMT_BLOCK:           // 0
-      TEXT_NODE( PLpgSQL_stmt_block, label );
+      TEXT_NODE( PLpgSQL_stmt_block, node, label );
       CHILD_STMT_LIST( PLpgSQL_stmt_block, node, body );
+      NUMBER_NODE( PLpgSQL_stmt_block, node, n_initvars );
 
+      // FIXME exception block
       if (((PLpgSQL_stmt_block *)node)->exceptions) {
         xml_tag_open( context->dump, "exceptions" );
         foreach( item, ((PLpgSQL_stmt_block *)node)->exceptions->exc_list )
@@ -225,22 +232,22 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       }
       break;
     case PLPGSQL_STMT_ASSIGN:          // 1
-      CHILD_EXPR( PLpgSQL_stmt_assign, node, expr );
-      NUMBER_NODE( PLpgSQL_stmt_assign, varno );
+      CHILD_DATUM( PLpgSQL_stmt_assign, node, expr );
+      NUMBER_NODE( PLpgSQL_stmt_assign, node, varno );
       break;
     case PLPGSQL_STMT_IF:              // 2
-      CHILD_EXPR( PLpgSQL_stmt_if, node, cond );
+      CHILD_DATUM( PLpgSQL_stmt_if, node, cond );
       CHILD_STMT_LIST( PLpgSQL_stmt_if, node, true_body );
       CHILD_STMT_LIST( PLpgSQL_stmt_if, node, false_body );
       break;
     case PLPGSQL_STMT_CASE:            // 3
-      CHILD_EXPR( PLpgSQL_stmt_case, node, t_expr );
-      NUMBER_NODE( PLpgSQL_stmt_case, t_varno );
+      CHILD_DATUM( PLpgSQL_stmt_case, node, t_expr );
+      NUMBER_NODE( PLpgSQL_stmt_case, node, t_varno );
 
       xml_tag_open( context->dump, "case_when_list" );
       foreach( item, ((PLpgSQL_stmt_case *)node)->case_when_list ) {
         xml_tag_open( context->dump, "CASE_WHEN" );
-        CHILD_EXPR( PLpgSQL_case_when, lfirst(item), expr );
+        CHILD_DATUM( PLpgSQL_case_when, lfirst(item), expr );
         CHILD_STMT_LIST( PLpgSQL_case_when, lfirst(item), stmts );
         xml_tag_close( context->dump, "CASE_WHEN" );
       }
@@ -251,102 +258,129 @@ static void dump_statement( FunctionDumpContext * context, PLpgSQL_stmt *node )
       
       break;
     case PLPGSQL_STMT_LOOP:            // 4
-      TEXT_NODE( PLpgSQL_stmt_loop, label );
+      TEXT_NODE( PLpgSQL_stmt_loop, node, label );
       CHILD_STMT_LIST( PLpgSQL_stmt_loop, node, body );
       break;
     case PLPGSQL_STMT_WHILE:           // 5
-      TEXT_NODE( PLpgSQL_stmt_while, label );
-      CHILD_EXPR( PLpgSQL_stmt_while, node, cond );
+      TEXT_NODE( PLpgSQL_stmt_while, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_while, node, cond );
       CHILD_STMT_LIST( PLpgSQL_stmt_while, node, body );
       break;
-    case PLPGSQL_STMT_FORI:            // 6
-      TEXT_NODE( PLpgSQL_stmt_fori, label );
-
-      xml_tag_open( context->dump, "var" );
-      dump_datum( context, ((PLpgSQL_stmt_fori *)node)->var );
-      xml_tag_close( context->dump, "var" );
-
-      CHILD_EXPR( PLpgSQL_stmt_fori, node, lower );
-      CHILD_EXPR( PLpgSQL_stmt_fori, node, upper );
-      CHILD_EXPR( PLpgSQL_stmt_fori, node, step );
-      BOOL_NODE( PLpgSQL_stmt_fori, reverse );
+    case PLPGSQL_STMT_FORI:            // 6 for statement with integer loop var
+      TEXT_NODE( PLpgSQL_stmt_fori, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_fori, node, var );
+      CHILD_DATUM( PLpgSQL_stmt_fori, node, lower );
+      CHILD_DATUM( PLpgSQL_stmt_fori, node, upper );
+      CHILD_DATUM( PLpgSQL_stmt_fori, node, step );
+      BOOL_NODE( PLpgSQL_stmt_fori, node, reverse );
       CHILD_STMT_LIST( PLpgSQL_stmt_fori, node, body );
       break;
-    case PLPGSQL_STMT_FORS:            // 7
-      TEXT_NODE( PLpgSQL_stmt_fors, label );
-
-      xml_tag_open( context->dump, "rec" );
-      dump_datum( context, ((PLpgSQL_stmt_fors *)node)->rec );
-      xml_tag_close( context->dump, "rec" );
-
-      xml_tag_open( context->dump, "row" );
-      dump_datum( context, ((PLpgSQL_stmt_fors *)node)->row );
-      xml_tag_close( context->dump, "row" );
+    case PLPGSQL_STMT_FORS:            // 7 for statement over select
+      TEXT_NODE( PLpgSQL_stmt_fors, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_fors, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_fors, node, row );
       CHILD_STMT_LIST( PLpgSQL_stmt_fors, node, body );
-      CHILD_EXPR( PLpgSQL_stmt_fors, node, query );
+      CHILD_DATUM( PLpgSQL_stmt_fors, node, query );
       break;
-    case PLPGSQL_STMT_FORC:            // 8
-      TEXT_NODE( PLpgSQL_stmt_forc, label );
-      xml_tag_open( context->dump, "rec" );
-      dump_datum( context, ((PLpgSQL_stmt_forc *)node)->rec );
-      xml_tag_close( context->dump, "rec" );
-
-      xml_tag_open( context->dump, "row" );
-      dump_datum( context, ((PLpgSQL_stmt_forc *)node)->row );
-      xml_tag_close( context->dump, "row" );
-
+    case PLPGSQL_STMT_FORC:            // 8 for statement over cursor
+      TEXT_NODE( PLpgSQL_stmt_forc, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_forc, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_forc, node, row );
       CHILD_STMT_LIST( PLpgSQL_stmt_forc, node, body );
-      NUMBER_NODE( PLpgSQL_stmt_forc, curvar );
-      CHILD_EXPR( PLpgSQL_stmt_forc, node, argquery );
+      NUMBER_NODE( PLpgSQL_stmt_forc, node, curvar );
+      CHILD_DATUM( PLpgSQL_stmt_forc, node, argquery );
       break;
     case PLPGSQL_STMT_EXIT:            // 9
-      BOOL_NODE( PLpgSQL_stmt_exit, is_exit );
-      TEXT_NODE( PLpgSQL_stmt_exit, label );
-      CHILD_EXPR( PLpgSQL_stmt_exit, node, cond );
+      BOOL_NODE( PLpgSQL_stmt_exit, node, is_exit );
+      TEXT_NODE( PLpgSQL_stmt_exit, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_exit, node, cond );
       break;
     case PLPGSQL_STMT_RETURN:          // 10
-      CHILD_EXPR( PLpgSQL_stmt_return, node, expr );
-      NUMBER_NODE( PLpgSQL_stmt_return, retvarno );
+      CHILD_DATUM( PLpgSQL_stmt_return, node, expr );
+      NUMBER_NODE( PLpgSQL_stmt_return, node, retvarno );
       break;
     case PLPGSQL_STMT_RETURN_NEXT:     // 11
-      CHILD_EXPR( PLpgSQL_stmt_return_next, node, expr );
-      NUMBER_NODE( PLpgSQL_stmt_return_next, retvarno );
+      CHILD_DATUM( PLpgSQL_stmt_return_next, node, expr );
+      NUMBER_NODE( PLpgSQL_stmt_return_next, node, retvarno );
       break;
     case PLPGSQL_STMT_RETURN_QUERY:    // 12
-      CHILD_EXPR( PLpgSQL_stmt_return_query, node, query );
-      CHILD_EXPR( PLpgSQL_stmt_return_query, node, dynquery );
-
-      if (((PLpgSQL_stmt_return_query *)node)->params) {
-        xml_tag_open( context->dump, "params" );
-        foreach( item, ((PLpgSQL_stmt_return_query *)node)->params)
-          dump_datum( context, lfirst( item ) );
-        xml_tag_close( context->dump, "params" );
-      }
+      CHILD_DATUM( PLpgSQL_stmt_return_query, node, query );
+      CHILD_DATUM( PLpgSQL_stmt_return_query, node, dynquery );
+      CHILD_DATUM_LIST( PLpgSQL_stmt_return_query, node, params );
       break;
     case PLPGSQL_STMT_RAISE:           // 13
-      NUMBER_NODE( PLpgSQL_stmt_raise, elog_level );
-      TEXT_NODE( PLpgSQL_stmt_raise, condname );
-      TEXT_NODE( PLpgSQL_stmt_raise, message );
-      // FIXME params and options missing
+      NUMBER_NODE( PLpgSQL_stmt_raise, node, elog_level );
+      TEXT_NODE( PLpgSQL_stmt_raise, node, condname );
+      TEXT_NODE( PLpgSQL_stmt_raise, node, message );
+      CHILD_DATUM_LIST( PLpgSQL_stmt_raise, node, params );
+      xml_tag_open( context->dump, "options" );
+      foreach( item, ((PLpgSQL_stmt_raise *)(node))->options ) {
+        xml_tag_open( context->dump, "RAISE_OPTION" );
+        NUMBER_NODE( PLpgSQL_raise_option, lfirst(item), opt_type ); 
+        CHILD_DATUM( PLpgSQL_raise_option, lfirst(item), expr)
+        xml_tag_close( context->dump, "RAISE_OPTION" );
+      }
+      xml_tag_close( context->dump, "options" );
       break;
     case PLPGSQL_STMT_EXECSQL:         // 14
-      child_expression( context, "sqlstmt", ((PLpgSQL_stmt_execsql *)node)->sqlstmt);
-      
+      CHILD_DATUM( PLpgSQL_stmt_execsql, node, sqlstmt );
+      BOOL_NODE( PLpgSQL_stmt_execsql, node, mod_stmt );
+      BOOL_NODE( PLpgSQL_stmt_execsql, node, into );
+      BOOL_NODE( PLpgSQL_stmt_execsql, node, strict );
+      CHILD_DATUM( PLpgSQL_stmt_execsql, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_execsql, node, row );
       break;
     case PLPGSQL_STMT_DYNEXECUTE:      // 15
-      // FIXME incomplete 
-      if (((PLpgSQL_stmt_dynexecute *)node)->params) {
-        xml_tag_open( context->dump, "params" );
-        foreach( item, ((PLpgSQL_stmt_dynexecute *)node)->params)
-          dump_datum( context, lfirst( item ) );
-        xml_tag_close( context->dump, "params" );
+      CHILD_DATUM( PLpgSQL_stmt_dynexecute, node, query );
+      BOOL_NODE( PLpgSQL_stmt_dynexecute, node, into );
+      BOOL_NODE( PLpgSQL_stmt_dynexecute, node, strict );
+      CHILD_DATUM( PLpgSQL_stmt_dynexecute, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_dynexecute, node, row );
+      CHILD_DATUM_LIST( PLpgSQL_stmt_dynexecute, node, params );
+      break;
+    case PLPGSQL_STMT_DYNFORS:         // 16
+      TEXT_NODE( PLpgSQL_stmt_dynfors, node, label );
+      CHILD_DATUM( PLpgSQL_stmt_dynfors, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_dynfors, node, row );
+      CHILD_STMT_LIST( PLpgSQL_stmt_dynfors, node, body );
+      CHILD_DATUM( PLpgSQL_stmt_dynfors, node, query );
+      CHILD_DATUM_LIST( PLpgSQL_stmt_dynfors, node, params );
+      break;
+    case PLPGSQL_STMT_GETDIAG:
+      xml_tag_open( context->dump, "diag_items" );
+      foreach( item, ((PLpgSQL_stmt_getdiag *)(node))->diag_items ) {
+        xml_tag_open( context->dump, "DIAG_ITEM" );
+        NUMBER_NODE( PLpgSQL_diag_item, lfirst(item), kind ); 
+        NUMBER_NODE( PLpgSQL_diag_item, lfirst(item), target ); 
+        xml_tag_close( context->dump, "DIAG_ITEM" );
       }
-      CHILD_EXPR( PLpgSQL_stmt_dynexecute, node, query );
+      xml_tag_close( context->dump, "diag_items" );
       break;
-    default:
-      // FIXME
-      xml_tag( context->dump, "node", "cmd_type", "%d", node->cmd_type, NULL );
+    case PLPGSQL_STMT_OPEN:
+      NUMBER_NODE( PLpgSQL_stmt_open, node, curvar );
+      NUMBER_NODE( PLpgSQL_stmt_open, node, cursor_options );
+      CHILD_DATUM( PLpgSQL_stmt_open, node, returntype );
+      CHILD_DATUM( PLpgSQL_stmt_open, node, argquery );
+      CHILD_DATUM( PLpgSQL_stmt_open, node, query );
+      CHILD_DATUM( PLpgSQL_stmt_open, node, dynquery );
       break;
+    case PLPGSQL_STMT_FETCH:
+      CHILD_DATUM( PLpgSQL_stmt_fetch, node, rec );
+      CHILD_DATUM( PLpgSQL_stmt_fetch, node, row );
+      NUMBER_NODE( PLpgSQL_stmt_fetch, node, curvar );
+      xml_textnode( context->dump, "direction", "%s", FetchDirection_Names[((PLpgSQL_stmt_fetch*)node)->direction] );
+      NUMBER_NODE( PLpgSQL_stmt_fetch, node, how_many );
+      CHILD_DATUM( PLpgSQL_stmt_fetch, node, expr );
+      BOOL_NODE( PLpgSQL_stmt_fetch, node, is_move );
+    case PLPGSQL_STMT_CLOSE:
+      NUMBER_NODE( PLpgSQL_stmt_close, node, curvar );
+      break;
+    case PLPGSQL_STMT_PERFORM:
+      CHILD_DATUM( PLpgSQL_stmt_perform, node, expr );
+      break;
+//    default:
+//      xml_tag( context->dump, "node", "cmd_type", "%d", node->cmd_type, NULL );
+//      break;
 
   };
   xml_tag_close( context->dump, tagname );
