@@ -189,11 +189,13 @@ static void dump_datum( FunctionDumpContext * context, PLpgSQL_datum * node )
         xml_textnode( context->dump, "expr_simple_type_name", "%d", oid_datatype_name(((PLpgSQL_expr *)node)->expr_simple_type) );
       }
 
+      xml_tag_open( context->dump, "params" );
       for( i=0; i < ((PLpgSQL_expr *)node)->nparams; i++ ) {
         xml_tag_open( context->dump, "Param" );
         xml_textnode( context->dump, "index", "%d", ((PLpgSQL_expr *)node)->params[i] );
         xml_tag_close( context->dump, "Param" );
       }
+      xml_tag_close( context->dump, "params" );
       break;
     case PLPGSQL_DTYPE_TRIGARG:
       CHILD_DATUM( PLpgSQL_trigarg, node, argnum );
