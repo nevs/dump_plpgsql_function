@@ -66,11 +66,16 @@ bool parse_tree_walker( Node *node, DumpContext * context )
       CHILD_NODE( JoinExpr, quals );
       CHILD_NODE( JoinExpr, alias );
       break;
-    case T_Integer:            // 651
+    case T_Integer:        // 651
       xml_textnode( context, "value", "%ld", intVal( node ), NULL );
       break;
-    case T_String:             // 653
+    case T_Float:          // 652
+      xml_textnode( context, "value", "%f", floatVal( node ), NULL );
+      break;
+    case T_String:         // 653
       xml_textnode( context, "value", "%s", strVal( node ), NULL );
+      break;
+    case T_Null:           // 655
       break;
     case T_InsertStmt:     // 702
       CHILD_NODE( InsertStmt, relation );
