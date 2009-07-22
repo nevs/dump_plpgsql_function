@@ -36,10 +36,3 @@ const char * PLPGSQL_STMT_Names[] = {
   [PLPGSQL_STMT_PERFORM] = "PERFORM"
 };
 
-const char * FetchDirection_Names[] = {
-  [FETCH_FORWARD] = "FORWARD",
-  [FETCH_BACKWARD] = "BACKWARD",
-  [FETCH_ABSOLUTE] = "ABSOLUTE",
-  [FETCH_RELATIVE] = "RELATIVE"
-};
-

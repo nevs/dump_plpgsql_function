@@ -8,6 +8,7 @@
 #include "string_helper.h"
 
 #include "plpgsql_names.h"
+#include "sql_parsetree_names.h"
 
 #define CHILD_DATUM( type, node, child ) \
   if (((type *)node)->child) { \
