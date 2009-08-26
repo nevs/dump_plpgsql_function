@@ -19,11 +19,12 @@ void string_helper_init()
   register_printf_function('N', print_xml, print_xml_arginfo);
 }
 
-static void xml_indent( DumpContext * context )
+static int xml_indent( DumpContext * context )
 {
   int i;
   for( i=0; i<context->indent; i++ )
     append_string( context->output, "  " );
+  return 2 * context->indent;
 }
 
 DumpContext * new_dump_context()
@@ -39,7 +40,7 @@ int xml_tag( DumpContext * context, const char * tagname, ... )
   va_list ap;
   int written = 0, len;
 
-  xml_indent( context );
+  written = xml_indent( context );
 
   len = append_string( context->output, "<%N", tagname );
   if ( len < 0 ) return len;
@@ -85,7 +86,7 @@ int xml_textnode( DumpContext * context, const char * tagname, const char * form
   va_list ap;
   int written = 0, len;
 
-  xml_indent( context );
+  written = xml_indent( context );
 
   len = append_string( context->output, "<%N>", tagname );
   if ( len < 0 ) return len;
@@ -110,12 +111,9 @@ int xml_textnode( DumpContext * context, const char * tagname, const char * form
 
 int xml_tag_open( DumpContext * context, const char * tagname )
 {
-  va_list ap;
   int written = 0, len;
 
-  xml_indent( context );
-  if ( len < 0 ) return len;
-  written += len;
+  written = xml_indent( context );
 
   len = append_string( context->output, "<%N>\n", tagname );
   if ( len < 0 ) return len;
@@ -128,12 +126,9 @@ int xml_tag_open( DumpContext * context, const char * tagname )
 
 int xml_tag_open_namespace( DumpContext * context, const char * tagname, const char * namespace )
 {
-  va_list ap;
   int written = 0, len;
 
-  xml_indent( context );
-  if ( len < 0 ) return len;
-  written += len;
+  written = xml_indent( context );
 
   len = append_string( context->output, "<%N xmlns=\"%N\">\n", tagname, namespace );
   if ( len < 0 ) return len;
