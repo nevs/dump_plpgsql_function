@@ -23,6 +23,13 @@ CREATE OR REPLACE FUNCTION test_simple( stmt text ) RETURNS VOID AS $$
   END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION minimal( arg1 text ) RETURNS VOID AS $$
+  BEGIN
+
+    RETURN;
+  END;
+$$ LANGUAGE plpgsql;
+
 
 -- SELECT dump_sql_parse_tree($$SELECT foo.f1 AS f4,f2 FROM pg_user;$$);
 

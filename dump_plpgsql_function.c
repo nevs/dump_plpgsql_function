@@ -99,6 +99,7 @@ const char * dump_plpgsql_function_internal( DumpContext *dump, Oid func_oid )
       xml_tag_open( context->dump, "argument" );
 
       xml_textnode( context->dump, "position", "%d", func->fn_argvarnos[i] );
+      xml_textnode( context->dump, "name", "$%d", i + 1 );
       dump_datatype( context, func->fn_hashkey->argtypes[i] );
       xml_tag_close( context->dump, "argument" );
     }
